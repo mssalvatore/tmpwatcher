@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import inotify.adapters
+import inotify.constants as ic
+import logging
 import os
 
 DEFAULT_MONITORED_DIR = '/tmp'
@@ -10,8 +13,12 @@ DEFAULT_SYSLOG_PORT = 514
 INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
 INVALID_DIR_ERROR = "The directory '%s' does not exist"
 
+EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
+INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
+
 def main():
     args = parse_args()
+    detect_ow_files(args.dir)
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -46,10 +53,51 @@ def _raise_on_invalid_port(port):
 
     if port < 1 or port > 65535:
         raise ValueError(INVALID_PORT_ERROR)
-    
+
 def _raise_on_invalid_dir(dir):
     if not os.path.isdir(dir):
         raise ValueError(INVALID_DIR_ERROR % dir)
+
+def detect_ow_files(dir):
+    while True: # TODO: Break out of this loop
+        try:
+            i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)#, mask=ic.constants.IN_CREATE)
+            for event in i.event_gen(yield_nones=False):
+                (headers, type_names, path, filename) = event
+
+                print("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
+                      path, filename, type_names))
+                process_event(event)
+        except inotify.adapters.TerminalEventException as tex:
+            # TODO: Print a useful message
+            import time
+            time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is detected
+            pass
+
+def process_event(event):
+    (headers, event_types, path, filename) = event
+    if not has_interesting_events(event_types, INTERESTING_EVENTS):
+        return
+
+    if is_world_writable(path, filename):
+        send_ow_alert(path, filename)
+
+
+def has_interesting_events(event_types, interesting_events):
+    # Converts event_types to a set and takes the intersection of interesting
+    # events and received events. If there are any items in the intersection, we
+    # know there was at least one interesting event.
+    return len(interesting_events.intersection(set(event_types))) > 0
+
+def is_world_writable(path, filename):
+    full_path = os.path.join(path, filename)
+    status = os.stat(full_path)
+
+    return status.st_mode & 0o002
+
+def send_ow_alert(path, filename):
+    print(os.path.join(path, filename) + " IS WORLD WRITABLE")
+
 
 if __name__ == "__main__":
     main()
