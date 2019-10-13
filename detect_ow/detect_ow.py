@@ -16,8 +16,13 @@ INVALID_DIR_ERROR = "The directory '%s' does not exist"
 EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
 INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 
+_LOGGER = logging.getLogger(__name__)
+_LOGGER.addHandler(logging.NullHandler)
+
 def main():
+    global _LOGGER
     args = parse_args()
+    _LOGGER = configure_logging(args.debug)
     detect_ow_files(args.dir)
 
 def parse_args():
@@ -34,6 +39,8 @@ def parse_args():
                         help='IP address or hostname of a syslog server')
     parser.add_argument('-t', '--tcp', action='store_true',
                         help='Use TCP instead of UDP to send syslog messages.')
+    parser.add_argument('--debug', action='store_true', default=False,
+                        help='Enable debug logging')
 
     args = parser.parse_args()
     try:
@@ -58,14 +65,28 @@ def _raise_on_invalid_dir(dir):
     if not os.path.isdir(dir):
         raise ValueError(INVALID_DIR_ERROR % dir)
 
+def configure_logging(debug):
+    log_level = logging.DEBUG if debug else logging.INFO
+
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+
+    sh = logging.StreamHandler()
+    fh = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
+    sh.setFormatter(fh)
+    logger.addHandler(sh)
+
+    return logging.getLogger(__name__)
+
 def detect_ow_files(dir):
     while True: # TODO: Break out of this loop
         try:
+            _LOGGER.info("Setting up inotify watches on %s and its subdirectories" % dir)
             i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)#, mask=ic.constants.IN_CREATE)
             for event in i.event_gen(yield_nones=False):
                 (headers, type_names, path, filename) = event
 
-                print("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
+                _LOGGER.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
                       path, filename, type_names))
                 process_event(event)
         except inotify.adapters.TerminalEventException as tex:
@@ -75,11 +96,15 @@ def detect_ow_files(dir):
             pass
 
 def process_event(event):
-    (headers, event_types, path, filename) = event
+    _LOGGER.debug("Processing event")
+    # '_' variable stands in for "headers", which is not used in this function
+    (_, event_types, path, filename) = event
     if not has_interesting_events(event_types, INTERESTING_EVENTS):
+        _LOGGER.debug("No relevant event types found")
         return
 
     if is_world_writable(path, filename):
+        _LOGGER.info("Found world writable file/directory. Sending alert.")
         send_ow_alert(path, filename)
 
 
@@ -91,13 +116,14 @@ def has_interesting_events(event_types, interesting_events):
 
 def is_world_writable(path, filename):
     full_path = os.path.join(path, filename)
+    _LOGGER.debug("Checking if %s is world writable" % full_path)
+
     status = os.stat(full_path)
 
     return status.st_mode & 0o002
 
 def send_ow_alert(path, filename):
-    print(os.path.join(path, filename) + " IS WORLD WRITABLE")
-
+    _LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
 
 if __name__ == "__main__":
     main()

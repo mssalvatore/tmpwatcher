@@ -1,6 +1,7 @@
 import argparse
 import collections
 from detect_ow import detect_ow
+import logging
 import os
 import pytest
 
