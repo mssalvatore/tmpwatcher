@@ -5,6 +5,9 @@ import inotify.adapters
 import inotify.constants as ic
 import logging
 import os
+import signal
+import sys
+import time
 
 DEFAULT_MONITORED_DIR = '/tmp'
 DEFAULT_SYSLOG_HOST = '127.0.0.1'
@@ -18,6 +21,18 @@ INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler)
+
+_PROCESS_EVENTS = True
+
+def receive_signal(signum, stack_frame):
+    global _PROCESS_EVENTS
+
+    _LOGGER.debug("Received signal %s" % signal.Signals(signum))
+    _LOGGER.info("Cleaning up and exiting")
+
+    _PROCESS_EVENTS = False
+    time.sleep(1)
+    sys.exit(0)
 
 def main():
     global _LOGGER
@@ -79,11 +94,14 @@ def configure_logging(debug):
     return logging.getLogger(__name__)
 
 def detect_ow_files(dir):
-    while True: # TODO: Break out of this loop
+    while _PROCESS_EVENTS:
         try:
             _LOGGER.info("Setting up inotify watches on %s and its subdirectories" % dir)
             i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)#, mask=ic.constants.IN_CREATE)
             for event in i.event_gen(yield_nones=False):
+                if not _PROCESS_EVENTS:
+                    break
+
                 (headers, type_names, path, filename) = event
 
                 _LOGGER.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
@@ -91,7 +109,6 @@ def detect_ow_files(dir):
                 process_event(event)
         except inotify.adapters.TerminalEventException as tex:
             # TODO: Print a useful message
-            import time
             time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is detected
             pass
 
@@ -130,4 +147,7 @@ def send_ow_alert(path, filename):
     _LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, receive_signal)
+    signal.signal(signal.SIGTERM, receive_signal)
+
     main()
