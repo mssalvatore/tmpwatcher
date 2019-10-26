@@ -115,12 +115,16 @@ def has_interesting_events(event_types, interesting_events):
     return len(interesting_events.intersection(set(event_types))) > 0
 
 def is_world_writable(path, filename):
-    full_path = os.path.join(path, filename)
-    _LOGGER.debug("Checking if %s is world writable" % full_path)
+    try:
+        full_path = os.path.join(path, filename)
+        _LOGGER.debug("Checking if %s is world writable" % full_path)
 
-    status = os.stat(full_path)
+        status = os.stat(full_path)
 
-    return status.st_mode & 0o002
+        return status.st_mode & 0o002
+    except (FileNotFoundError)as fnf:
+        _LOGGER.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
+        return False
 
 def send_ow_alert(path, filename):
     _LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
