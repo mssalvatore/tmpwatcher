@@ -4,8 +4,10 @@ import argparse
 import inotify.adapters
 import inotify.constants as ic
 import logging
+import logging.handlers
 import os
 import signal
+import socket
 import sys
 import time
 
@@ -22,6 +24,9 @@ INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler)
 
+_SYSLOG_LOGGER = logging.getLogger("%s.%s" % (__name__, "syslog"))
+_SYSLOG_LOGGER.addHandler(logging.NullHandler)
+
 _PROCESS_EVENTS = True
 
 def receive_signal(signum, stack_frame):
@@ -37,7 +42,7 @@ def receive_signal(signum, stack_frame):
 def main():
     global _LOGGER
     args = parse_args()
-    _LOGGER = configure_logging(args.debug)
+    configure_logging(args.debug, args.server, args.port)
     detect_ow_files(args.dir)
 
 def parse_args():
@@ -80,18 +85,41 @@ def _raise_on_invalid_dir(dir):
     if not os.path.isdir(dir):
         raise ValueError(INVALID_DIR_ERROR % dir)
 
-def configure_logging(debug):
+class ContextFilter(logging.Filter):
+    hostname = socket.gethostname()
+
+    def filter(self, record):
+        record.hostname = ContextFilter.hostname
+        return True
+
+def configure_logging(debug, server, port):
+    configure_root_logger(debug)
+    configure_syslog_logger(server, port)
+
+    _LOGGER.removeHandler(logging.NullHandler)
+
+def configure_syslog_logger(server, port):
+    log_formatter = logging.Formatter("%(hostname)s - %(module)s - %(levelname)s - %(message)s")
+
+    syslog_handler = logging.handlers.SysLogHandler(address=(server, port), socktype=socket.SOCK_DGRAM)
+    syslog_handler.setFormatter(log_formatter)
+    _SYSLOG_LOGGER.addFilter(ContextFilter())
+    _SYSLOG_LOGGER.addHandler(syslog_handler)
+
+    _SYSLOG_LOGGER.removeHandler(logging.NullHandler)
+    #_SYSLOG_LOGGER.removeHandler(stream_handler)
+
+def configure_root_logger(debug):
+    root_logger = logging.getLogger()
+
     log_level = logging.DEBUG if debug else logging.INFO
+    root_logger.setLevel(log_level)
 
-    logger = logging.getLogger()
-    logger.setLevel(log_level)
+    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
 
-    sh = logging.StreamHandler()
-    fh = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
-    sh.setFormatter(fh)
-    logger.addHandler(sh)
-
-    return logging.getLogger(__name__)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(log_formatter)
+    root_logger.addHandler(stream_handler)
 
 def detect_ow_files(dir):
     while _PROCESS_EVENTS:
@@ -144,6 +172,7 @@ def is_world_writable(path, filename):
 
 def send_ow_alert(path, filename):
     _LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
+    _SYSLOG_LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, receive_signal)
