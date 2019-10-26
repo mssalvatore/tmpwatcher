@@ -108,9 +108,8 @@ def detect_ow_files(dir):
                       path, filename, type_names))
                 process_event(event)
         except inotify.adapters.TerminalEventException as tex:
-            # TODO: Print a useful message
             time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is detected
-            pass
+            _LOGGER.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
 
 def process_event(event):
     _LOGGER.debug("Processing event")
