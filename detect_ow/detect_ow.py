@@ -171,8 +171,12 @@ def is_world_writable(path, filename):
         return False
 
 def send_ow_alert(path, filename):
-    _LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
-    _SYSLOG_LOGGER.warning(os.path.join(path, filename) + " IS WORLD WRITABLE")
+    full_path = os.path.join(path, filename)
+    file_or_dir = "directory" if os.path.isdir(full_path) else "file"
+    msg = "Found world writable %s: %s" % (file_or_dir, full_path)
+
+    _LOGGER.warning(msg)
+    _SYSLOG_LOGGER.warning(msg)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, receive_signal)
