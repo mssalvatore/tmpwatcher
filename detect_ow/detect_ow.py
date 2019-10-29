@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import collections
+import configparser
 import inotify.adapters
 import inotify.constants as ic
 import logging
@@ -11,12 +13,14 @@ import socket
 import sys
 import time
 
-DEFAULT_MONITORED_DIR = '/tmp'
-DEFAULT_SYSLOG_HOST = '127.0.0.1'
-DEFAULT_SYSLOG_PORT = 514
 
-INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
+#DEFAULT_MONITORED_DIR = '/tmp'
+#DEFAULT_SYSLOG_HOST = '127.0.0.1'
+#DEFAULT_SYSLOG_PORT = 514
+
 INVALID_DIR_ERROR = "The directory '%s' does not exist"
+INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
+INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
 
 EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
 INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
@@ -28,6 +32,10 @@ _SYSLOG_LOGGER = logging.getLogger("%s.%s" % (__name__, "syslog"))
 _SYSLOG_LOGGER.addHandler(logging.NullHandler)
 
 _PROCESS_EVENTS = True
+
+DEFAULT_CONFIG_FILE = '/etc/detect_ow.conf'
+
+Options = collections.namedtuple('Options', 'dir port syslog_server protocol debug')
 
 def receive_signal(signum, stack_frame):
     global _PROCESS_EVENTS
@@ -41,38 +49,84 @@ def receive_signal(signum, stack_frame):
 
 def main():
     global _LOGGER
-    args = parse_args()
-    configure_logging(args.debug, args.server, args.port)
-    detect_ow_files(args.dir)
+    try:
+        (parser, args) = _parse_args()
+        config = _read_config(args.config_path)
+        options = _merge_args_and_config(args, config)
+    except Exception as ex:
+        print("Error: %s" % str(ex), file=sys.stderr)
+        sys.exit(1)
 
-def parse_args():
+    configure_logging(options.debug, options.syslog_server, options.port)
+    detect_ow_files(options.dir)
+
+def _parse_args():
     parser = argparse.ArgumentParser(
             description="Watch a directory for newly created world writable "\
                     "files and directories. Log events to a syslog server.",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-d', '--dir', action='store', default=DEFAULT_MONITORED_DIR,
+    parser.add_argument('-c', '--config-path', action='store', default=DEFAULT_CONFIG_FILE,
+                        help='A config file to read settings from. Command line ' \
+                              'arguments override values read from the config file. ' \
+                              'If the config file does not exist, detect_ow will ' \
+                              'log a warning and ignore the specified config file')
+    parser.add_argument('-d', '--dir', action='store',
                         help='A directory to watch for world writable files/dirs')
-    parser.add_argument('-p', '--port', action='store',
-                        default=DEFAULT_SYSLOG_PORT, type=int,
+    parser.add_argument('-p', '--port', action='store', type=int,
                         help='The port that the syslog server is listening on')
-    parser.add_argument('-s', '--server', action='store', default=DEFAULT_SYSLOG_HOST,
+    parser.add_argument('-s', '--syslog-server', action='store',
                         help='IP address or hostname of a syslog server')
     parser.add_argument('-t', '--tcp', action='store_true',
                         help='Use TCP instead of UDP to send syslog messages.')
-    parser.add_argument('--debug', action='store_true', default=False,
+    parser.add_argument('--debug', action='store_true',
                         help='Enable debug logging')
 
     args = parser.parse_args()
-    try:
-        _raise_on_invalid_args(args)
-    except (TypeError, ValueError) as err:
-        parser.error(str(err))
 
-    return args
+    return parser, args
 
-def _raise_on_invalid_args(args):
-    _raise_on_invalid_port(args.port)
-    _raise_on_invalid_dir(args.dir)
+def _read_config(config_path):
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    return config
+
+def _merge_args_and_config(args, config):
+    dir = "/tmp"
+    port = 514
+    syslog_server = "127.0.0.1"
+    protocol = "udp"
+    debug = False
+
+    if args.dir is not None:
+        dir = args.dir
+    elif 'dir' in config['DEFAULT']:
+        dir = config['DEFAULT']['dir']
+
+    if args.port is not None:
+        port = args.port
+    elif 'port' in config['DEFAULT']:
+        port = int(config['DEFAULT']['port'])
+
+    if args.syslog_server is not None:
+        syslog_server = args.syslog_server
+    elif 'syslog_server' in config['DEFAULT']:
+        syslog_server = config['DEFAULT']['syslog_server']
+
+    if args.tcp:
+        protocol = "tcp"
+    elif 'protocol' in config['DEFAULT']:
+        protocol = config['DEFAULT']['protocol'].lower()
+
+    _raise_on_invalid_options(port, dir, protocol)
+
+    return Options(dir=dir, port=port, syslog_server=syslog_server, protocol=protocol, debug=args.debug)
+
+
+def _raise_on_invalid_options(port, dir, protocol):
+    _raise_on_invalid_port(port)
+    _raise_on_invalid_dir(dir)
+    _raise_on_invalid_protocol(protocol)
 
 def _raise_on_invalid_port(port):
     if not isinstance(port, int):
@@ -84,6 +138,10 @@ def _raise_on_invalid_port(port):
 def _raise_on_invalid_dir(dir):
     if not os.path.isdir(dir):
         raise ValueError(INVALID_DIR_ERROR % dir)
+
+def _raise_on_invalid_protocol(protocol):
+    if protocol not in ('tcp', 'udp'):
+        raise ValueError(INVALID_PROTOCOL_ERROR % protocol)
 
 class ContextFilter(logging.Filter):
     hostname = socket.gethostname()
