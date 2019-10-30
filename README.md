@@ -99,5 +99,3 @@ A test coverage report can be viewed by pointing your browser at
 
 1. It may be acceptable for some files to be world writable. Add a whitelist
    capability so that alerts are not raised unnecessarily.
-
-1. It would be nice if detect_ow could watch more than one directory at a time.
