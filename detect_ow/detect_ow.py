@@ -11,6 +11,7 @@ import os
 import signal
 import socket
 import sys
+import threading
 import time
 
 
@@ -44,8 +45,6 @@ def receive_signal(signum, stack_frame):
     _LOGGER.info("Cleaning up and exiting")
 
     _PROCESS_EVENTS = False
-    time.sleep(1)
-    sys.exit(0)
 
 def main():
     global _LOGGER
@@ -58,7 +57,16 @@ def main():
         sys.exit(1)
 
     configure_logging(options.debug, options.syslog_server, options.port)
-    detect_ow_files(options.dirs[0])
+    for dir in options.dirs:
+        detect_ow_thread = threading.Thread(target=detect_ow_files, args=(dir,), daemon=True)
+        detect_ow_thread.start()
+
+    # TODO: Daemon threads are used because the threads are often blocked
+    # waiting on inotify events. Find a non-blocking inotify solution to remove
+    # the necessity for this busy loop. Daemon threads are automatically killed
+    # after main thread exits.
+    while _PROCESS_EVENTS:
+        time.sleep(1)
 
 def _parse_args():
     parser = argparse.ArgumentParser(
@@ -184,14 +192,11 @@ def configure_root_logger(debug):
     root_logger.addHandler(stream_handler)
 
 def detect_ow_files(dir):
-    while _PROCESS_EVENTS:
+    while True:
         try:
             _LOGGER.info("Setting up inotify watches on %s and its subdirectories" % dir)
-            i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)#, mask=ic.constants.IN_CREATE)
+            i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)
             for event in i.event_gen(yield_nones=False):
-                if not _PROCESS_EVENTS:
-                    break
-
                 (headers, type_names, path, filename) = event
 
                 _LOGGER.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
