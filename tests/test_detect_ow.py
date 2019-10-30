@@ -5,94 +5,118 @@ import logging
 import os
 import pytest
 
-Args = collections.namedtuple('Args', 'dir port')
-
-class MockParser():
-    def __init__(self, args, error_msg=None):
-        self.args = args
-        self.error_msg = error_msg
-        self.error_called = False
-
-    def add_argument(self, *args, **kwargs):
-        pass
-
-    def parse_args(self):
-        return self.args
-
-    def error(self, error_msg):
-        self.error_called = True
-        assert self.error_msg == error_msg
+Args = collections.namedtuple('Args', 'dirs port syslog_server tcp debug')
 
 def patch_isdir(monkeypatch, is_dir):
     monkeypatch.setattr(os.path, "isdir", lambda _: is_dir)
 
-def mock_argparse(monkeypatch, args, error=None):
-    mp = MockParser(args, error)
-    monkeypatch.setattr(argparse, "ArgumentParser", lambda *args, **kwargs: mp)
-
-    return mp
-
-def mock_argparse_port(monkeypatch, port, error=None):
+def mock_args_port(monkeypatch, port):
     patch_isdir(monkeypatch, True)
 
-    args = Args(dir="", port=port)
-    return mock_argparse(monkeypatch, args, error)
-
-def mock_argparse_invalid_port(monkeypatch, port):
-    return mock_argparse_port(monkeypatch, port, detect_ow.INVALID_PORT_ERROR)
+    args = Args(dirs="", port=port, syslog_server = "", tcp=False, debug=False)
+    return args, {"DEFAULT": {}}
 
 def test_port_not_int(monkeypatch):
-    mp = mock_argparse_invalid_port(monkeypatch, "iv")
-    detect_ow.parse_args()
-
-    assert mp.error_called
+    with pytest.raises(TypeError):
+        args, config = mock_args_port(monkeypatch, "iv")
+        detect_ow._merge_args_and_config(args, config)
 
 def test_port_zero(monkeypatch):
-    mp = mock_argparse_invalid_port(monkeypatch, 0)
-    detect_ow.parse_args()
-
-    assert mp.error_called
+    with pytest.raises(ValueError):
+        args, config = mock_args_port(monkeypatch, 0)
+        detect_ow._merge_args_and_config(args, config)
 
 def test_port_negative(monkeypatch):
-    mp = mock_argparse_invalid_port(monkeypatch, -1)
-    detect_ow.parse_args()
-
-    assert mp.error_called
+    with pytest.raises(ValueError):
+        args, config = mock_args_port(monkeypatch, -1)
+        detect_ow._merge_args_and_config(args, config)
 
 def test_port_too_high(monkeypatch):
-    mp = mock_argparse_invalid_port(monkeypatch, 65536)
-    detect_ow.parse_args()
+    with pytest.raises(ValueError):
+        args, config = mock_args_port(monkeypatch, 65536)
+        detect_ow._merge_args_and_config(args, config)
 
-    assert mp.error_called
-
-def test_port_valid(monkeypatch):
-    mp = mock_argparse_port(monkeypatch, 6514)
-    detect_ow.parse_args()
-
-    assert not mp.error_called
-
-def mock_argparse_dir(monkeypatch, is_dir, error=None):
+def mock_args_dir(monkeypatch, is_dir, error=None):
     patch_isdir(monkeypatch, is_dir)
 
     DIR = "/tmp"
-    args = Args(dir=DIR, port=514)
+    args = Args(dirs=DIR, port=514, syslog_server = "", tcp=False, debug=False)
 
-    if error:
-        return mock_argparse(monkeypatch, args, error % DIR)
-    else:
-        return mock_argparse(monkeypatch, args)
+    return args, {"DEFAULT": {}}
 
 def test_dir_no_exist(monkeypatch):
-    mp = mock_argparse_dir(monkeypatch, False, detect_ow.INVALID_DIR_ERROR)
+    with pytest.raises(ValueError):
+        args, config = mock_args_dir(monkeypatch, False)
+        detect_ow._merge_args_and_config(args, config)
 
-    detect_ow.parse_args()
-    assert mp.error_called
+@pytest.fixture
+def config():
+    return {
+            "DEFAULT": {
+                "dirs": "/tmp,/home/user/tmp",
+                "port": 514,
+                "syslog_server": "127.0.0.1",
+                "protocol": "udp",
+            }
+        }
 
-def test_dir_exists(monkeypatch):
-    mp = mock_argparse_dir(monkeypatch, True)
+def test_invalid_protocol(monkeypatch, config):
+    patch_isdir(monkeypatch, True)
+    config['DEFAULT']['protocol'] = 'bogus'
 
-    detect_ow.parse_args()
-    assert not mp.error_called
+    args = Args(dirs=None, port=None, syslog_server=None, tcp=False, debug=False)
+
+    with pytest.raises(ValueError):
+        options = detect_ow._merge_args_and_config(args, config)
+
+
+def test_args_override_dir(monkeypatch, config):
+    patch_isdir(monkeypatch, True)
+
+    expected_dir = ["/some/new/dir"]
+    args = Args(dirs=','.join(expected_dir), port=None, syslog_server=None, tcp=False, debug=False)
+    options = detect_ow._merge_args_and_config(args, config)
+
+    assert options.dirs == expected_dir
+    assert options.port == config['DEFAULT']['port']
+    assert options.syslog_server == config['DEFAULT']['syslog_server']
+    assert options.protocol == config['DEFAULT']['protocol']
+
+def test_args_override_port(monkeypatch, config):
+    patch_isdir(monkeypatch, True)
+
+    expected_port = 600
+    args = Args(dirs=None, port=expected_port, syslog_server=None, tcp=False, debug=False)
+    options = detect_ow._merge_args_and_config(args, config)
+
+    assert options.dirs == config['DEFAULT']['dirs'].split(',')
+    assert options.port == expected_port
+    assert options.syslog_server == config['DEFAULT']['syslog_server']
+    assert options.protocol == config['DEFAULT']['protocol']
+
+def test_args_override_syslog_server(monkeypatch, config):
+    patch_isdir(monkeypatch, True)
+
+    expected_syslog_server = "otherserver.domain"
+    args = Args(dirs=None, port=None, syslog_server=expected_syslog_server, tcp=False, debug=False)
+    options = detect_ow._merge_args_and_config(args, config)
+
+    assert options.dirs == config['DEFAULT']['dirs'].split(',')
+    assert options.port == config['DEFAULT']['port']
+    assert options.syslog_server == expected_syslog_server
+    assert options.protocol == config['DEFAULT']['protocol']
+
+def test_args_override_protocol(monkeypatch, config):
+    patch_isdir(monkeypatch, True)
+
+    expected_protocol = 'tcp'
+    args = Args(dirs=None, port=None, syslog_server=None, tcp=True, debug=False)
+    options = detect_ow._merge_args_and_config(args, config)
+
+    assert options.dirs == config['DEFAULT']['dirs'].split(',')
+    assert options.port == config['DEFAULT']['port']
+    assert options.syslog_server == config['DEFAULT']['syslog_server']
+    assert options.protocol == expected_protocol
 
 def test_has_interesting_events_false():
     interesting_events = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
