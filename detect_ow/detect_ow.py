@@ -11,6 +11,7 @@ import os
 import signal
 import socket
 import sys
+import threading
 import time
 
 
@@ -35,7 +36,7 @@ _PROCESS_EVENTS = True
 
 DEFAULT_CONFIG_FILE = '/etc/detect_ow.conf'
 
-Options = collections.namedtuple('Options', 'dir port syslog_server protocol debug')
+Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
 
 def receive_signal(signum, stack_frame):
     global _PROCESS_EVENTS
@@ -44,8 +45,6 @@ def receive_signal(signum, stack_frame):
     _LOGGER.info("Cleaning up and exiting")
 
     _PROCESS_EVENTS = False
-    time.sleep(1)
-    sys.exit(0)
 
 def main():
     global _LOGGER
@@ -58,7 +57,16 @@ def main():
         sys.exit(1)
 
     configure_logging(options.debug, options.syslog_server, options.port)
-    detect_ow_files(options.dir)
+    for dir in options.dirs:
+        detect_ow_thread = threading.Thread(target=detect_ow_files, args=(dir,), daemon=True)
+        detect_ow_thread.start()
+
+    # TODO: Daemon threads are used because the threads are often blocked
+    # waiting on inotify events. Find a non-blocking inotify solution to remove
+    # the necessity for this busy loop. Daemon threads are automatically killed
+    # after main thread exits.
+    while _PROCESS_EVENTS:
+        time.sleep(1)
 
 def _parse_args():
     parser = argparse.ArgumentParser(
@@ -70,8 +78,9 @@ def _parse_args():
                               'arguments override values read from the config file. ' \
                               'If the config file does not exist, detect_ow will ' \
                               'log a warning and ignore the specified config file')
-    parser.add_argument('-d', '--dir', action='store',
-                        help='A directory to watch for world writable files/dirs')
+    parser.add_argument('-d', '--dirs', action='store',
+                        help='A comma-separated list of directories to watch ' \
+                             'for world writable files/dirs')
     parser.add_argument('-p', '--port', action='store', type=int,
                         help='The port that the syslog server is listening on')
     parser.add_argument('-s', '--syslog-server', action='store',
@@ -92,16 +101,18 @@ def _read_config(config_path):
     return config
 
 def _merge_args_and_config(args, config):
-    dir = "/tmp"
+    dirs = ["/tmp"]
     port = 514
     syslog_server = "127.0.0.1"
     protocol = "udp"
     debug = False
 
-    if args.dir is not None:
-        dir = args.dir
-    elif 'dir' in config['DEFAULT']:
-        dir = config['DEFAULT']['dir']
+    if args.dirs is not None:
+        print(args.dirs)
+        dirs = args.dirs.split(',')
+    elif 'dirs' in config['DEFAULT']:
+        print(config['DEFAULT']['dirs'])
+        dirs = config['DEFAULT']['dirs'].split(',')
 
     if args.port is not None:
         port = args.port
@@ -118,14 +129,15 @@ def _merge_args_and_config(args, config):
     elif 'protocol' in config['DEFAULT']:
         protocol = config['DEFAULT']['protocol'].lower()
 
-    _raise_on_invalid_options(port, dir, protocol)
+    _raise_on_invalid_options(port, dirs, protocol)
 
-    return Options(dir=dir, port=port, syslog_server=syslog_server, protocol=protocol, debug=args.debug)
+    return Options(dirs=dirs, port=port, syslog_server=syslog_server, protocol=protocol, debug=args.debug)
 
 
-def _raise_on_invalid_options(port, dir, protocol):
+def _raise_on_invalid_options(port, dirs, protocol):
     _raise_on_invalid_port(port)
-    _raise_on_invalid_dir(dir)
+    for dir in dirs:
+        _raise_on_invalid_dir(dir)
     _raise_on_invalid_protocol(protocol)
 
 def _raise_on_invalid_port(port):
@@ -180,14 +192,11 @@ def configure_root_logger(debug):
     root_logger.addHandler(stream_handler)
 
 def detect_ow_files(dir):
-    while _PROCESS_EVENTS:
+    while True:
         try:
             _LOGGER.info("Setting up inotify watches on %s and its subdirectories" % dir)
-            i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)#, mask=ic.constants.IN_CREATE)
+            i = inotify.adapters.InotifyTree(dir, mask=EVENT_MASK)
             for event in i.event_gen(yield_nones=False):
-                if not _PROCESS_EVENTS:
-                    break
-
                 (headers, type_names, path, filename) = event
 
                 _LOGGER.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
