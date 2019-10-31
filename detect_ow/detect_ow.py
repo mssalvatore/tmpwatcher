@@ -38,16 +38,11 @@ DEFAULT_CONFIG_FILE = '/etc/detect_ow.conf'
 
 Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
 
-def receive_signal(signum, stack_frame):
-    global _PROCESS_EVENTS
-
-    _LOGGER.debug("Received signal %s" % signal.Signals(signum))
-    _LOGGER.info("Cleaning up and exiting")
-
-    _PROCESS_EVENTS = False
-
 def main():
     global _LOGGER
+
+    register_signal_handlers()
+
     try:
         (parser, args) = _parse_args()
         config = _read_config(args.config_path)
@@ -67,6 +62,18 @@ def main():
     # after main thread exits.
     while _PROCESS_EVENTS:
         time.sleep(1)
+
+def register_signal_handlers():
+    signal.signal(signal.SIGINT, receive_signal)
+    signal.signal(signal.SIGTERM, receive_signal)
+
+def receive_signal(signum, stack_frame):
+    global _PROCESS_EVENTS
+
+    _LOGGER.debug("Received signal %s" % signal.Signals(signum))
+    _LOGGER.info("Cleaning up and exiting")
+
+    _PROCESS_EVENTS = False
 
 def _parse_args():
     parser = argparse.ArgumentParser(
@@ -246,7 +253,4 @@ def send_ow_alert(path, filename):
     _SYSLOG_LOGGER.warning(msg)
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, receive_signal)
-    signal.signal(signal.SIGTERM, receive_signal)
-
     main()
