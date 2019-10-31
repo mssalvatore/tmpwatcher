@@ -1,6 +1,6 @@
 import argparse
 import collections
-from detect_ow import detect_ow
+from owwatcher import owwatcher
 import logging
 import os
 import pytest
@@ -19,22 +19,22 @@ def mock_args_port(monkeypatch, port):
 def test_port_not_int(monkeypatch):
     with pytest.raises(TypeError):
         args, config = mock_args_port(monkeypatch, "iv")
-        detect_ow._merge_args_and_config(args, config)
+        owwatcher._merge_args_and_config(args, config)
 
 def test_port_zero(monkeypatch):
     with pytest.raises(ValueError):
         args, config = mock_args_port(monkeypatch, 0)
-        detect_ow._merge_args_and_config(args, config)
+        owwatcher._merge_args_and_config(args, config)
 
 def test_port_negative(monkeypatch):
     with pytest.raises(ValueError):
         args, config = mock_args_port(monkeypatch, -1)
-        detect_ow._merge_args_and_config(args, config)
+        owwatcher._merge_args_and_config(args, config)
 
 def test_port_too_high(monkeypatch):
     with pytest.raises(ValueError):
         args, config = mock_args_port(monkeypatch, 65536)
-        detect_ow._merge_args_and_config(args, config)
+        owwatcher._merge_args_and_config(args, config)
 
 def mock_args_dir(monkeypatch, is_dir, error=None):
     patch_isdir(monkeypatch, is_dir)
@@ -47,7 +47,7 @@ def mock_args_dir(monkeypatch, is_dir, error=None):
 def test_dir_no_exist(monkeypatch):
     with pytest.raises(ValueError):
         args, config = mock_args_dir(monkeypatch, False)
-        detect_ow._merge_args_and_config(args, config)
+        owwatcher._merge_args_and_config(args, config)
 
 @pytest.fixture
 def config():
@@ -67,7 +67,7 @@ def test_invalid_protocol(monkeypatch, config):
     args = Args(dirs=None, port=None, syslog_server=None, tcp=False, debug=False)
 
     with pytest.raises(ValueError):
-        options = detect_ow._merge_args_and_config(args, config)
+        options = owwatcher._merge_args_and_config(args, config)
 
 
 def test_args_override_dir(monkeypatch, config):
@@ -75,7 +75,7 @@ def test_args_override_dir(monkeypatch, config):
 
     expected_dir = ["/some/new/dir"]
     args = Args(dirs=','.join(expected_dir), port=None, syslog_server=None, tcp=False, debug=False)
-    options = detect_ow._merge_args_and_config(args, config)
+    options = owwatcher._merge_args_and_config(args, config)
 
     assert options.dirs == expected_dir
     assert options.port == config['DEFAULT']['port']
@@ -87,7 +87,7 @@ def test_args_override_port(monkeypatch, config):
 
     expected_port = 600
     args = Args(dirs=None, port=expected_port, syslog_server=None, tcp=False, debug=False)
-    options = detect_ow._merge_args_and_config(args, config)
+    options = owwatcher._merge_args_and_config(args, config)
 
     assert options.dirs == config['DEFAULT']['dirs'].split(',')
     assert options.port == expected_port
@@ -99,7 +99,7 @@ def test_args_override_syslog_server(monkeypatch, config):
 
     expected_syslog_server = "otherserver.domain"
     args = Args(dirs=None, port=None, syslog_server=expected_syslog_server, tcp=False, debug=False)
-    options = detect_ow._merge_args_and_config(args, config)
+    options = owwatcher._merge_args_and_config(args, config)
 
     assert options.dirs == config['DEFAULT']['dirs'].split(',')
     assert options.port == config['DEFAULT']['port']
@@ -111,7 +111,7 @@ def test_args_override_protocol(monkeypatch, config):
 
     expected_protocol = 'tcp'
     args = Args(dirs=None, port=None, syslog_server=None, tcp=True, debug=False)
-    options = detect_ow._merge_args_and_config(args, config)
+    options = owwatcher._merge_args_and_config(args, config)
 
     assert options.dirs == config['DEFAULT']['dirs'].split(',')
     assert options.port == config['DEFAULT']['port']
@@ -122,16 +122,16 @@ def test_has_interesting_events_false():
     interesting_events = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
     received_events = ["IN_DELETE", "IN_ISDIR"]
 
-    assert not detect_ow.has_interesting_events(received_events, interesting_events)
+    assert not owwatcher.has_interesting_events(received_events, interesting_events)
 
 def test_has_interesting_events_true():
     interesting_events = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 
     received_events = ["IN_CREATE", "IN_ISDIR"]
-    assert detect_ow.has_interesting_events(received_events, interesting_events)
+    assert owwatcher.has_interesting_events(received_events, interesting_events)
 
     received_events = ["IN_MOVED_TO"]
-    assert detect_ow.has_interesting_events(received_events, interesting_events)
+    assert owwatcher.has_interesting_events(received_events, interesting_events)
 
 MockStat = collections.namedtuple('MockStat', 'st_mode')
 def mock_stat(monkeypatch, mode):
@@ -143,29 +143,29 @@ def test_is_world_writable_true(monkeypatch):
     filename = "test_file"
 
     mock_stat(monkeypatch, 0o006)
-    assert detect_ow.is_world_writable(path, filename)
+    assert owwatcher.is_world_writable(path, filename)
 
     mock_stat(monkeypatch, 0o777)
-    assert detect_ow.is_world_writable(path, filename)
+    assert owwatcher.is_world_writable(path, filename)
 
     mock_stat(monkeypatch, 0o002)
-    assert detect_ow.is_world_writable(path, filename)
+    assert owwatcher.is_world_writable(path, filename)
 
     mock_stat(monkeypatch, 0o666)
-    assert detect_ow.is_world_writable(path, filename)
+    assert owwatcher.is_world_writable(path, filename)
 
 def test_is_world_writable_false(monkeypatch):
     path = "/tmp/random_dir_kljafl"
     filename = "test_file"
 
     mock_stat(monkeypatch, 0o004)
-    assert not detect_ow.is_world_writable(path, filename)
+    assert not owwatcher.is_world_writable(path, filename)
 
     mock_stat(monkeypatch, 0o770)
-    assert not detect_ow.is_world_writable(path, filename)
+    assert not owwatcher.is_world_writable(path, filename)
 
     mock_stat(monkeypatch, 0o641)
-    assert not detect_ow.is_world_writable(path, filename)
+    assert not owwatcher.is_world_writable(path, filename)
 
     mock_stat(monkeypatch, 0o665)
-    assert not detect_ow.is_world_writable(path, filename)
+    assert not owwatcher.is_world_writable(path, filename)

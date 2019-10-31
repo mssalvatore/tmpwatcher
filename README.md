@@ -1,4 +1,4 @@
-# detect_ow
+# owwatcher
 
 Detects when world-writable directories or files are created in a specific
 directory. This is useful for passively discovering TOCTOU vulnerabilities.
@@ -44,20 +44,20 @@ $> pip install .
 $> deactivate
 ```
 
-## Runing detect_ow
+## Runing owwatcher
 
 This project can be run directly from this repository by running `python
-detect_ow/detect_ow.py` in the top level directory.
+owwatcher/owwatcher.py` in the top level directory.
 
 If this project has been installed using pip, you can simply invoke
-`detect_ow`, assuming the installed script is in your $PATH.
+`owwatcher`, assuming the installed script is in your $PATH.
 
 If this project has been installed into a virtualenv, it can be run by
 performing the following steps:
 
 ```
 $> source venv/bin/activate
-$> detect_ow
+$> owwatcher
 $> deactivate
 ```
 

@@ -34,7 +34,7 @@ _SYSLOG_LOGGER.addHandler(logging.NullHandler)
 
 _PROCESS_EVENTS = True
 
-DEFAULT_CONFIG_FILE = '/etc/detect_ow.conf'
+DEFAULT_CONFIG_FILE = '/etc/owwatcher.conf'
 
 Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
 
@@ -53,8 +53,8 @@ def main():
 
     configure_logging(options.debug, options.syslog_server, options.port)
     for dir in options.dirs:
-        detect_ow_thread = threading.Thread(target=detect_ow_files, args=(dir,), daemon=True)
-        detect_ow_thread.start()
+        owwatcher_thread = threading.Thread(target=watch_for_world_writable_files, args=(dir,), daemon=True)
+        owwatcher_thread.start()
 
     # TODO: Daemon threads are used because the threads are often blocked
     # waiting on inotify events. Find a non-blocking inotify solution to remove
@@ -83,7 +83,7 @@ def _parse_args():
     parser.add_argument('-c', '--config-path', action='store', default=DEFAULT_CONFIG_FILE,
                         help='A config file to read settings from. Command line ' \
                               'arguments override values read from the config file. ' \
-                              'If the config file does not exist, detect_ow will ' \
+                              'If the config file does not exist, owwatcher will ' \
                               'log a warning and ignore the specified config file')
     parser.add_argument('-d', '--dirs', action='store',
                         help='A comma-separated list of directories to watch ' \
@@ -198,7 +198,7 @@ def configure_root_logger(debug):
     stream_handler.setFormatter(log_formatter)
     root_logger.addHandler(stream_handler)
 
-def detect_ow_files(dir):
+def watch_for_world_writable_files(dir):
     while True:
         try:
             _LOGGER.info("Setting up inotify watches on %s and its subdirectories" % dir)
@@ -210,7 +210,7 @@ def detect_ow_files(dir):
                       path, filename, type_names))
                 process_event(event)
         except inotify.adapters.TerminalEventException as tex:
-            time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is detected
+            time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is received
             _LOGGER.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
 
 def process_event(event):
