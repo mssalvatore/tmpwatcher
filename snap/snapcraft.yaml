@@ -27,3 +27,6 @@ parts:
 apps:
     owwatcher:
         command: bin/owwatcher
+    owwatcherd:
+        command: bin/owwatcher
+        daemon: simple
