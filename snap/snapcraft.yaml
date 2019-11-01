@@ -1,6 +1,6 @@
 name: owwatcher
 base: core18
-version: '1.0.0'
+version: git
 summary: Detects when world-writable files are created in a specified directory
 description: |
     This tool monitors a directory of your choosing (usually /tmp) in real
