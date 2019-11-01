@@ -34,8 +34,6 @@ _SYSLOG_LOGGER.addHandler(logging.NullHandler)
 
 _PROCESS_EVENTS = True
 
-DEFAULT_CONFIG_FILE = '/etc/owwatcher.conf'
-
 Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
 
 def main():
@@ -76,11 +74,13 @@ def receive_signal(signum, stack_frame):
     _PROCESS_EVENTS = False
 
 def _parse_args():
+    default_config_file = _get_default_config_file()
+
     parser = argparse.ArgumentParser(
             description="Watch a directory for newly created world writable "\
                     "files and directories. Log events to a syslog server.",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--config-path', action='store', default=DEFAULT_CONFIG_FILE,
+    parser.add_argument('-c', '--config-path', action='store', default=default_config_file,
                         help='A config file to read settings from. Command line ' \
                               'arguments override values read from the config file. ' \
                               'If the config file does not exist, owwatcher will ' \
@@ -100,6 +100,14 @@ def _parse_args():
     args = parser.parse_args()
 
     return parser, args
+
+def _get_default_config_file():
+    config_file_name = 'owwatcher.conf'
+
+    if 'SNAP_DATA' in os.environ:
+        return os.path.join(os.getenv('SNAP_DATA'), config_file_name)
+
+    return os.path.join('/etc/', config_file_name)
 
 def _read_config(config_path):
     config = configparser.ConfigParser()
