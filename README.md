@@ -74,12 +74,13 @@ A test coverage report can be viewed by pointing your browser at
 
 ## Limitations and Future Work
 
-1. Currently, this tool must be run as root. It uses the recursive capability of
-   the [python inotify](https://pypi.org/project/inotify/) library to
-   recursively watch the specified directory. If the user does not have the
-   appropriate permissions to watch all files within the directory, the inotify
-   library fails. An future improvement is planned that would allow the user to
-   specify whether or not to skip files they cannot access.
+1. Currently, this tool must be run as root if you want to observe /tmp. It
+   uses the recursive capability of the [python
+   inotify](https://pypi.org/project/inotify/) library to recursively watch the
+   specified directory. If the user does not have the appropriate permissions
+   to watch all files within the directory, the inotify library fails. A
+   future improvement is planned that would allow the user to specify whether
+   or not to skip files they cannot access.
 
 1. The syslog alerts only show what file or directory was found to be world
    writable. It would simplify the work of the researcher if it could also make
@@ -97,5 +98,5 @@ A test coverage report can be viewed by pointing your browser at
    were only sent once. I've yet to determine whether or not this is the fault
    of this tool, the python syslog handler, or rsyslog itself.
 
-1. It may be acceptable for some files to be world writable. Add a whitelist
-   capability so that alerts are not raised unnecessarily.
+1. It may be acceptable for some files to be world writable. a whitelist
+   capability to prevent unnecessary alerts would reduce false positives.
