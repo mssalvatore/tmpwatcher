@@ -169,3 +169,15 @@ def test_is_world_writable_false(monkeypatch):
 
     mock_stat(monkeypatch, 0o665)
     assert not owwatcher.is_world_writable(path, filename)
+
+def test_get_default_config_file(monkeypatch):
+    monkeypatch.delenv('SNAP_DATA', raising=False)
+
+    expected_config_file = '/etc/owwatcher.conf'
+    assert expected_config_file == owwatcher._get_default_config_file()
+
+def test_get_default_config_file_snap(monkeypatch):
+    monkeypatch.setenv('SNAP_DATA', '/var/snap/TESTING')
+
+    expected_config_file = '/var/snap/TESTING/owwatcher.conf'
+    assert expected_config_file == owwatcher._get_default_config_file()

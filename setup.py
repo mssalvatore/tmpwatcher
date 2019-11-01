@@ -33,5 +33,6 @@ setuptools.setup(
         'pytest-cov',
     ],
     entry_points={'console_scripts': ['owwatcher=owwatcher.owwatcher:main']},
+    package_data={'owwatcher': ['owwatcher-default.conf']}
 )
 
