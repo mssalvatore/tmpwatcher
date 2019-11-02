@@ -5,11 +5,9 @@ import collections
 import configparser
 import inotify.adapters
 import inotify.constants as ic
-import logging
-import logging.handlers
 import os
+from .owwatcher_logger_configurer import OWWatcherLoggerConfigurer
 import signal
-import socket
 import sys
 import threading
 import time
@@ -21,21 +19,16 @@ INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 't
 EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
 INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 
-_LOGGER = logging.getLogger('owwatcher.%s' % __name__)
-_LOGGER.addHandler(logging.NullHandler)
-
-# The syslog logger must not be a child of the _LOGGER, otherwise some log
-# messages may be duplicated as _SYSLOG_LOGGER will inherit _LOGGER's handlers
-_SYSLOG_LOGGER = logging.getLogger('owwatcher.syslog')
-_SYSLOG_LOGGER.addHandler(logging.NullHandler)
+# Creating null loggers allows pytest test suite to run as logging is not
+# necessarily configured for each unit test run.
+_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
+_SYSLOG_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
 
 _PROCESS_EVENTS = True
 
 Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
 
 def main():
-    global _LOGGER
-
     register_signal_handlers()
 
     try:
@@ -47,6 +40,7 @@ def main():
         sys.exit(1)
 
     configure_logging(options.debug, options.syslog_server, options.port)
+
     for dir in options.dirs:
         owwatcher_thread = threading.Thread(target=watch_for_world_writable_files, args=(dir,), daemon=True)
         owwatcher_thread.start()
@@ -167,51 +161,13 @@ def _raise_on_invalid_protocol(protocol):
     if protocol not in ('tcp', 'udp'):
         raise ValueError(INVALID_PROTOCOL_ERROR % protocol)
 
-class ContextFilter(logging.Filter):
-    hostname = socket.gethostname()
+def configure_logging(debug, syslog_server, syslog_port):
+    global _LOGGER
+    global _SYSLOG_LOGGER
 
-    def filter(self, record):
-        record.hostname = ContextFilter.hostname
-        return True
-
-def configure_logging(debug, server, port):
-    configure_root_logger(debug)
-    configure_inotify_logger()
-    configure_owwatcher_logger()
-    configure_syslog_logger(server, port)
-
-def configure_root_logger(debug):
-    root_logger = logging.getLogger()
-
-    log_level = logging.DEBUG if debug else logging.INFO
-    root_logger.setLevel(log_level)
-
-def configure_inotify_logger():
-    log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-    inotify_logger = logging.getLogger('inotify')
-    configure_stream_handler(inotify_logger, log_formatter)
-
-def configure_owwatcher_logger():
-    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
-
-    configure_stream_handler(_LOGGER, log_formatter)
-    _LOGGER.removeHandler(logging.NullHandler)
-
-def configure_stream_handler(logger, log_formatter):
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(log_formatter)
-    logger.addHandler(stream_handler)
-
-def configure_syslog_logger(server, port):
-    log_formatter = logging.Formatter("%(hostname)s - %(module)s - %(levelname)s - %(message)s")
-
-    syslog_handler = logging.handlers.SysLogHandler(address=(server, port), socktype=socket.SOCK_DGRAM)
-    syslog_handler.setFormatter(log_formatter)
-    _SYSLOG_LOGGER.addFilter(ContextFilter())
-    _SYSLOG_LOGGER.addHandler(syslog_handler)
-
-    _SYSLOG_LOGGER.removeHandler(logging.NullHandler)
+    logger_configurer = OWWatcherLoggerConfigurer(debug, syslog_server, syslog_port)
+    _LOGGER = logger_configurer.get_owwatcher_logger()
+    _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 
 def watch_for_world_writable_files(dir):
     while True:
