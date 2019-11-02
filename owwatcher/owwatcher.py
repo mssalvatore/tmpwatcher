@@ -14,11 +14,6 @@ import sys
 import threading
 import time
 
-
-#DEFAULT_MONITORED_DIR = '/tmp'
-#DEFAULT_SYSLOG_HOST = '127.0.0.1'
-#DEFAULT_SYSLOG_PORT = 514
-
 INVALID_DIR_ERROR = "The directory '%s' does not exist"
 INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
 INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
@@ -26,10 +21,12 @@ INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 't
 EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
 INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger('owwatcher.%s' % __name__)
 _LOGGER.addHandler(logging.NullHandler)
 
-_SYSLOG_LOGGER = logging.getLogger("%s.%s" % (__name__, "syslog"))
+# The syslog logger must not be a child of the _LOGGER, otherwise some log
+# messages may be duplicated as _SYSLOG_LOGGER will inherit _LOGGER's handlers
+_SYSLOG_LOGGER = logging.getLogger('owwatcher.syslog')
 _SYSLOG_LOGGER.addHandler(logging.NullHandler)
 
 _PROCESS_EVENTS = True
@@ -179,9 +176,32 @@ class ContextFilter(logging.Filter):
 
 def configure_logging(debug, server, port):
     configure_root_logger(debug)
+    configure_inotify_logger()
+    configure_owwatcher_logger()
     configure_syslog_logger(server, port)
 
+def configure_root_logger(debug):
+    root_logger = logging.getLogger()
+
+    log_level = logging.DEBUG if debug else logging.INFO
+    root_logger.setLevel(log_level)
+
+def configure_inotify_logger():
+    log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    inotify_logger = logging.getLogger('inotify')
+    configure_stream_handler(inotify_logger, log_formatter)
+
+def configure_owwatcher_logger():
+    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
+
+    configure_stream_handler(_LOGGER, log_formatter)
     _LOGGER.removeHandler(logging.NullHandler)
+
+def configure_stream_handler(logger, log_formatter):
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(log_formatter)
+    logger.addHandler(stream_handler)
 
 def configure_syslog_logger(server, port):
     log_formatter = logging.Formatter("%(hostname)s - %(module)s - %(levelname)s - %(message)s")
@@ -192,19 +212,6 @@ def configure_syslog_logger(server, port):
     _SYSLOG_LOGGER.addHandler(syslog_handler)
 
     _SYSLOG_LOGGER.removeHandler(logging.NullHandler)
-    #_SYSLOG_LOGGER.removeHandler(stream_handler)
-
-def configure_root_logger(debug):
-    root_logger = logging.getLogger()
-
-    log_level = logging.DEBUG if debug else logging.INFO
-    root_logger.setLevel(log_level)
-
-    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(log_formatter)
-    root_logger.addHandler(stream_handler)
 
 def watch_for_world_writable_files(dir):
     while True:

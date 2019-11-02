@@ -91,9 +91,6 @@ A test coverage report can be viewed by pointing your browser at
    line arguments. A packaging solution other than pip may also be required to
    achive this end.
 
-1. The syslog logger also prints to stdout unnecessarily. This needs to be
-   fixed.
-
 1. Sometimes rsyslog shows the same messages more than once, even though they
    were only sent once. I've yet to determine whether or not this is the fault
    of this tool, the python syslog handler, or rsyslog itself.
