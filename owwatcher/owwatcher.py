@@ -114,45 +114,15 @@ def _read_config(config_path):
 
     return config
 
+# TODO: Factor this out into it's own Options class. Replace Options named tuple
+#       with options class
 def _merge_args_and_config(args, config):
-    dirs = ["/tmp"]
-    syslog_port = 514
-    syslog_server = "127.0.0.1"
-    protocol = "udp"
-    log_file = _get_default_log_file()
-    debug = False
-
-    if args.dirs is not None:
-        dirs = args.dirs.split(',')
-    elif 'dirs' in config['DEFAULT']:
-        dirs = config['DEFAULT']['dirs'].split(',')
-
-    if args.syslog_port is not None:
-        syslog_port = args.syslog_port
-    elif 'syslog_port' in config['DEFAULT']:
-        syslog_port = int(config['DEFAULT']['syslog_port'])
-
-    if args.syslog_server is not None:
-        syslog_server = args.syslog_server
-    elif 'syslog_server' in config['DEFAULT']:
-        syslog_server = config['DEFAULT']['syslog_server']
-
-    if args.tcp:
-        protocol = "tcp"
-    elif 'protocol' in config['DEFAULT']:
-        protocol = config['DEFAULT']['protocol'].lower()
-
-    if args.log_file:
-        log_file = args.log_file
-    elif 'log_file' in config['DEFAULT']:
-        log_file = config['DEFAULT']['log_file'].lower()
-
-    if args.debug:
-        debug = True
-    elif 'debug' in config['DEFAULT']:
-        _raise_on_invalid_debug(config['DEFAULT']['debug'])
-        debug = True if config['DEFAULT']['debug'] == 'True' else False
-
+    dirs = _merge_dirs_option(args, config, ["/tmp"])
+    syslog_port = _merge_syslog_port_option(args, config, 514)
+    syslog_server = _merge_syslog_server_option(args, config, "127.0.0.1")
+    log_file = _merge_log_file_option(args, config, _get_default_log_file())
+    protocol = _merge_protocol_option(args, config, "udp")
+    debug = _merge_debug_option(args, config, False)
 
     options = Options(dirs=dirs, syslog_port=syslog_port, syslog_server=syslog_server,
                       protocol=protocol, log_file=log_file, debug=debug)
@@ -160,6 +130,46 @@ def _merge_args_and_config(args, config):
     _raise_on_invalid_options(options)
 
     return options
+
+def _merge_dirs_option(args, config, default):
+    return _merge_single_option('dirs', args.dirs, config, default).split(',')
+
+def _merge_syslog_port_option(args, config, default):
+    return _merge_single_option('syslog_port', args.syslog_port, config, default)
+
+def _merge_syslog_server_option(args, config, default):
+    return _merge_single_option('syslog_server', args.syslog_server, config, default)
+
+def _merge_log_file_option(args, config, default):
+    return _merge_single_option('log_file', args.log_file, config, default)
+
+def _merge_single_option(option_name, arg, config, default):
+    if arg is not None:
+        return arg
+
+    if option_name in config['DEFAULT']:
+        return config['DEFAULT'][option_name]
+
+    return default
+
+def _merge_protocol_option(args, config, default):
+    if args.tcp:
+        return "tcp"
+
+    if 'protocol' in config['DEFAULT']:
+        return config['DEFAULT']['protocol'].lower()
+
+    return default
+
+def _merge_debug_option(args, config, default):
+    if args.debug:
+        return True
+
+    if 'debug' in config['DEFAULT']:
+        _raise_on_invalid_debug(config['DEFAULT']['debug'])
+        return True if config['DEFAULT']['debug'] == 'True' else False
+
+    return default
 
 def _raise_on_invalid_options(options):
     _raise_on_invalid_syslog_port(options.syslog_port)
