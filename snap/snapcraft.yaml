@@ -1,0 +1,32 @@
+name: owwatcher
+base: core18
+version: git
+summary: Detects when world-writable files are created in a specified directory
+description: |
+    This tool monitors a directory of your choosing (usually /tmp) in real
+    time. If any world-writable files or directories are created in the
+    monitored directory, a notification is sent via the syslog protocol to a
+    syslog server of your choosing. 
+
+    This tool is not intended to detect any kind of malware or intrusion.
+    Rather, it is a vulnerability research tool which alerts a researcher of
+    potential TOCTOU vulnerabilities as the researcher goes about their daily
+    activities. In this way, the researcher takes a passive approach to
+    discovering TOCTOU vulnerabilities, rather than a more active approach
+    (e.g. code audits.)
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: classic
+
+parts:
+    owwatcher:
+        plugin: python
+        python-version: python3
+        source: .
+
+apps:
+    owwatcher:
+        command: bin/owwatcher
+    owwatcherd:
+        command: bin/owwatcher
+        daemon: simple

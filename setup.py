@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="detect_ow",
+    name="owwatcher",
     version="0.0.1",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
@@ -32,6 +32,7 @@ setuptools.setup(
         'pytest',
         'pytest-cov',
     ],
-    entry_points={'console_scripts': ['detect_ow=detect_ow.detect_ow:main']},
+    entry_points={'console_scripts': ['owwatcher=owwatcher.owwatcher:main']},
+    package_data={'owwatcher': ['owwatcher-default.conf']}
 )
 
