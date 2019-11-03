@@ -5,51 +5,44 @@ import collections
 import configparser
 import inotify.adapters
 import inotify.constants as ic
-import logging
-import logging.handlers
 import os
+from .owwatcher_logger_configurer import OWWatcherLoggerConfigurer
 import signal
-import socket
 import sys
 import threading
 import time
 
-
-#DEFAULT_MONITORED_DIR = '/tmp'
-#DEFAULT_SYSLOG_HOST = '127.0.0.1'
-#DEFAULT_SYSLOG_PORT = 514
-
 INVALID_DIR_ERROR = "The directory '%s' does not exist"
 INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
 INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
+INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
 
 EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
 INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
 
-_LOGGER = logging.getLogger(__name__)
-_LOGGER.addHandler(logging.NullHandler)
-
-_SYSLOG_LOGGER = logging.getLogger("%s.%s" % (__name__, "syslog"))
-_SYSLOG_LOGGER.addHandler(logging.NullHandler)
+# Creating null loggers allows pytest test suite to run as logging is not
+# necessarily configured for each unit test run.
+_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
+_SYSLOG_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
 
 _PROCESS_EVENTS = True
 
-Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
+Options = collections.namedtuple('Options', 'dirs port syslog_server protocol log_file debug')
 
 def main():
-    global _LOGGER
-
-    register_signal_handlers()
-
     try:
         (parser, args) = _parse_args()
         config = _read_config(args.config_path)
         options = _merge_args_and_config(args, config)
+        configure_logging(options.debug, options.syslog_server, options.port, options.log_file)
+        register_signal_handlers()
     except Exception as ex:
-        print("Error: %s" % str(ex), file=sys.stderr)
+        print("Error during initialization: %s" % str(ex), file=sys.stderr)
         sys.exit(1)
 
-    configure_logging(options.debug, options.syslog_server, options.port)
+    _LOGGER.info("Starting owwatcher...")
+    _log_config_options(options)
+
     for dir in options.dirs:
         owwatcher_thread = threading.Thread(target=watch_for_world_writable_files, args=(dir,), daemon=True)
         owwatcher_thread.start()
@@ -94,6 +87,8 @@ def _parse_args():
                         help='IP address or hostname of a syslog server')
     parser.add_argument('-t', '--tcp', action='store_true',
                         help='Use TCP instead of UDP to send syslog messages.')
+    parser.add_argument('-l', '--log-file', action='store',
+                        help='Path to log file')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug logging')
 
@@ -102,12 +97,16 @@ def _parse_args():
     return parser, args
 
 def _get_default_config_file():
-    config_file_name = 'owwatcher.conf'
+    return _get_default_file_path('/etc/', 'owwatcher.conf')
 
+def _get_default_log_file():
+    return _get_default_file_path('/var/log', 'owwatcher.log')
+
+def _get_default_file_path(default_path, file_name):
     if 'SNAP_DATA' in os.environ:
-        return os.path.join(os.getenv('SNAP_DATA'), config_file_name)
+        return os.path.join(os.getenv('SNAP_DATA'), file_name)
 
-    return os.path.join('/etc/', config_file_name)
+    return os.path.join(default_path, file_name)
 
 def _read_config(config_path):
     config = configparser.ConfigParser()
@@ -120,13 +119,12 @@ def _merge_args_and_config(args, config):
     port = 514
     syslog_server = "127.0.0.1"
     protocol = "udp"
+    log_file = _get_default_log_file()
     debug = False
 
     if args.dirs is not None:
-        print(args.dirs)
         dirs = args.dirs.split(',')
     elif 'dirs' in config['DEFAULT']:
-        print(config['DEFAULT']['dirs'])
         dirs = config['DEFAULT']['dirs'].split(',')
 
     if args.port is not None:
@@ -144,16 +142,31 @@ def _merge_args_and_config(args, config):
     elif 'protocol' in config['DEFAULT']:
         protocol = config['DEFAULT']['protocol'].lower()
 
-    _raise_on_invalid_options(port, dirs, protocol)
+    if args.log_file:
+        log_file = args.log_file
+    elif 'log_file' in config['DEFAULT']:
+        log_file = config['DEFAULT']['log_file'].lower()
 
-    return Options(dirs=dirs, port=port, syslog_server=syslog_server, protocol=protocol, debug=args.debug)
+    if args.debug:
+        debug = True
+    elif 'debug' in config['DEFAULT']:
+        _raise_on_invalid_debug(config['DEFAULT']['debug'])
+        debug = True if config['DEFAULT']['debug'] == 'True' else False
 
 
-def _raise_on_invalid_options(port, dirs, protocol):
-    _raise_on_invalid_port(port)
-    for dir in dirs:
+    options = Options(dirs=dirs, port=port, syslog_server=syslog_server,
+                      protocol=protocol, log_file=log_file, debug=debug)
+
+    _raise_on_invalid_options(options)
+
+    return options
+
+def _raise_on_invalid_options(options):
+    _raise_on_invalid_port(options.port)
+    _raise_on_invalid_protocol(options.protocol)
+
+    for dir in options.dirs:
         _raise_on_invalid_dir(dir)
-    _raise_on_invalid_protocol(protocol)
 
 def _raise_on_invalid_port(port):
     if not isinstance(port, int):
@@ -170,41 +183,25 @@ def _raise_on_invalid_protocol(protocol):
     if protocol not in ('tcp', 'udp'):
         raise ValueError(INVALID_PROTOCOL_ERROR % protocol)
 
-class ContextFilter(logging.Filter):
-    hostname = socket.gethostname()
+def _raise_on_invalid_debug(debug):
+    if debug not in ("True", "False"):
+        raise ValueError(INVALID_DEBUG_ERROR % debug)
 
-    def filter(self, record):
-        record.hostname = ContextFilter.hostname
-        return True
+def configure_logging(debug, syslog_server, syslog_port, log_file):
+    global _LOGGER
+    global _SYSLOG_LOGGER
 
-def configure_logging(debug, server, port):
-    configure_root_logger(debug)
-    configure_syslog_logger(server, port)
+    logger_configurer = OWWatcherLoggerConfigurer(debug, syslog_server, syslog_port, log_file)
+    _LOGGER = logger_configurer.get_owwatcher_logger()
+    _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 
-    _LOGGER.removeHandler(logging.NullHandler)
-
-def configure_syslog_logger(server, port):
-    log_formatter = logging.Formatter("%(hostname)s - %(module)s - %(levelname)s - %(message)s")
-
-    syslog_handler = logging.handlers.SysLogHandler(address=(server, port), socktype=socket.SOCK_DGRAM)
-    syslog_handler.setFormatter(log_formatter)
-    _SYSLOG_LOGGER.addFilter(ContextFilter())
-    _SYSLOG_LOGGER.addHandler(syslog_handler)
-
-    _SYSLOG_LOGGER.removeHandler(logging.NullHandler)
-    #_SYSLOG_LOGGER.removeHandler(stream_handler)
-
-def configure_root_logger(debug):
-    root_logger = logging.getLogger()
-
-    log_level = logging.DEBUG if debug else logging.INFO
-    root_logger.setLevel(log_level)
-
-    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(log_formatter)
-    root_logger.addHandler(stream_handler)
+def _log_config_options(options):
+    _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
+    _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
+    _LOGGER.info('Option "port": %s', options.port)
+    _LOGGER.info('Option "protocol": %s', options.protocol)
+    _LOGGER.info('Option "log_file": %s', options.log_file)
+    _LOGGER.info('Option "debug": %s', options.debug)
 
 def watch_for_world_writable_files(dir):
     while True:
@@ -215,7 +212,7 @@ def watch_for_world_writable_files(dir):
                 (headers, type_names, path, filename) = event
 
                 _LOGGER.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
-                      path, filename, type_names))
+                              path, filename, type_names))
                 process_event(event)
         except inotify.adapters.TerminalEventException as tex:
             time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is received
