@@ -4,13 +4,13 @@ import socket
 
 # This factory class creates and configures owwatcher's loggers
 class OWWatcherLoggerConfigurer:
-    def __init__(self, debug, syslog_server, syslog_port):
+    def __init__(self, debug, syslog_server, syslog_port, log_file):
         self.owwatcher_logger = None
         self.syslog_logger = None
 
         self._configure_root_logger(debug)
-        self._configure_inotify_logger()
-        self._configure_owwatcher_logger()
+        self._configure_inotify_logger(log_file)
+        self._configure_owwatcher_logger(log_file)
         self._configure_syslog_logger(syslog_server, syslog_port)
 
     def _configure_root_logger(self, debug):
@@ -19,23 +19,29 @@ class OWWatcherLoggerConfigurer:
         log_level = logging.DEBUG if debug else logging.INFO
         root_logger.setLevel(log_level)
 
-    def _configure_inotify_logger(self):
+    def _configure_inotify_logger(self, log_file):
         log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
         inotify_logger = logging.getLogger('inotify')
-        self._configure_stream_handler(inotify_logger, log_formatter)
+        self._configure_file_handler(inotify_logger, log_formatter, log_file)
 
-    def _configure_owwatcher_logger(self):
+    def _configure_owwatcher_logger(self, log_file):
         self.owwatcher_logger = logging.getLogger('owwatcher.%s' % __name__)
         log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
 
-        self._configure_stream_handler(self.owwatcher_logger, log_formatter)
+        self._configure_file_handler(self.owwatcher_logger, log_formatter, log_file)
 
+    def _configure_file_handler(self, logger, log_formatter, log_file):
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(log_formatter)
+        logger.addHandler(file_handler)
+
+    # Used for logging to stdout
+    # Currently dead code but will likely be used in the future
     def _configure_stream_handler(self, logger, log_formatter):
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(log_formatter)
         logger.addHandler(stream_handler)
-
 
     class _ContextFilter(logging.Filter):
         def __init__(self):

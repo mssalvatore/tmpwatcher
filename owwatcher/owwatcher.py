@@ -15,6 +15,7 @@ import time
 INVALID_DIR_ERROR = "The directory '%s' does not exist"
 INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
 INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
+INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
 
 EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
 INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
@@ -26,7 +27,7 @@ _SYSLOG_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
 
 _PROCESS_EVENTS = True
 
-Options = collections.namedtuple('Options', 'dirs port syslog_server protocol debug')
+Options = collections.namedtuple('Options', 'dirs port syslog_server protocol log_file debug')
 
 def main():
     register_signal_handlers()
@@ -39,7 +40,7 @@ def main():
         print("Error: %s" % str(ex), file=sys.stderr)
         sys.exit(1)
 
-    configure_logging(options.debug, options.syslog_server, options.port)
+    configure_logging(options.debug, options.syslog_server, options.port, options.log_file)
 
     for dir in options.dirs:
         owwatcher_thread = threading.Thread(target=watch_for_world_writable_files, args=(dir,), daemon=True)
@@ -85,6 +86,8 @@ def _parse_args():
                         help='IP address or hostname of a syslog server')
     parser.add_argument('-t', '--tcp', action='store_true',
                         help='Use TCP instead of UDP to send syslog messages.')
+    parser.add_argument('-l', '--log-file', action='store',
+                        help='Path to log file')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug logging')
 
@@ -93,12 +96,16 @@ def _parse_args():
     return parser, args
 
 def _get_default_config_file():
-    config_file_name = 'owwatcher.conf'
+    return _get_default_file_path('/etc/', 'owwatcher.conf')
 
+def _get_default_log_file():
+    return _get_default_file_path('/var/log', 'owwatcher.log')
+
+def _get_default_file_path(default_path, file_name):
     if 'SNAP_DATA' in os.environ:
-        return os.path.join(os.getenv('SNAP_DATA'), config_file_name)
+        return os.path.join(os.getenv('SNAP_DATA'), file_name)
 
-    return os.path.join('/etc/', config_file_name)
+    return os.path.join(default_path, file_name)
 
 def _read_config(config_path):
     config = configparser.ConfigParser()
@@ -111,6 +118,7 @@ def _merge_args_and_config(args, config):
     port = 514
     syslog_server = "127.0.0.1"
     protocol = "udp"
+    log_file = _get_default_log_file()
     debug = False
 
     if args.dirs is not None:
@@ -133,16 +141,31 @@ def _merge_args_and_config(args, config):
     elif 'protocol' in config['DEFAULT']:
         protocol = config['DEFAULT']['protocol'].lower()
 
-    _raise_on_invalid_options(port, dirs, protocol)
+    if args.log_file:
+        log_file = args.log_file
+    elif 'log_file' in config['DEFAULT']:
+        log_file = config['DEFAULT']['log_file'].lower()
 
-    return Options(dirs=dirs, port=port, syslog_server=syslog_server, protocol=protocol, debug=args.debug)
+    if args.debug:
+        debug = True
+    elif 'debug' in config['DEFAULT']:
+        _raise_on_invalid_debug(config['DEFAULT']['debug'])
+        debug = True if config['DEFAULT']['debug'] == 'True' else False
 
 
-def _raise_on_invalid_options(port, dirs, protocol):
-    _raise_on_invalid_port(port)
-    for dir in dirs:
+    options = Options(dirs=dirs, port=port, syslog_server=syslog_server,
+                      protocol=protocol, log_file=log_file, debug=debug)
+
+    _raise_on_invalid_options(options)
+
+    return options
+
+def _raise_on_invalid_options(options):
+    _raise_on_invalid_port(options.port)
+    _raise_on_invalid_protocol(options.protocol)
+
+    for dir in options.dirs:
         _raise_on_invalid_dir(dir)
-    _raise_on_invalid_protocol(protocol)
 
 def _raise_on_invalid_port(port):
     if not isinstance(port, int):
@@ -159,11 +182,15 @@ def _raise_on_invalid_protocol(protocol):
     if protocol not in ('tcp', 'udp'):
         raise ValueError(INVALID_PROTOCOL_ERROR % protocol)
 
-def configure_logging(debug, syslog_server, syslog_port):
+def _raise_on_invalid_debug(debug):
+    if debug not in ("True", "False"):
+        raise ValueError(INVALID_DEBUG_ERROR % debug)
+
+def configure_logging(debug, syslog_server, syslog_port, log_file):
     global _LOGGER
     global _SYSLOG_LOGGER
 
-    logger_configurer = OWWatcherLoggerConfigurer(debug, syslog_server, syslog_port)
+    logger_configurer = OWWatcherLoggerConfigurer(debug, syslog_server, syslog_port, log_file)
     _LOGGER = logger_configurer.get_owwatcher_logger()
     _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 
