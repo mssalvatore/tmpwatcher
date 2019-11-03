@@ -27,14 +27,14 @@ _SYSLOG_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
 
 _PROCESS_EVENTS = True
 
-Options = collections.namedtuple('Options', 'dirs port syslog_server protocol log_file debug')
+Options = collections.namedtuple('Options', 'dirs syslog_port syslog_server protocol log_file debug')
 
 def main():
     try:
         (parser, args) = _parse_args()
         config = _read_config(args.config_path)
         options = _merge_args_and_config(args, config)
-        configure_logging(options.debug, options.syslog_server, options.port, options.log_file)
+        configure_logging(options.debug, options.syslog_server, options.syslog_port, options.log_file)
         register_signal_handlers()
     except Exception as ex:
         print("Error during initialization: %s" % str(ex), file=sys.stderr)
@@ -81,7 +81,7 @@ def _parse_args():
     parser.add_argument('-d', '--dirs', action='store',
                         help='A comma-separated list of directories to watch ' \
                              'for world writable files/dirs')
-    parser.add_argument('-p', '--port', action='store', type=int,
+    parser.add_argument('-p', '--syslog_port', action='store', type=int,
                         help='The port that the syslog server is listening on')
     parser.add_argument('-s', '--syslog-server', action='store',
                         help='IP address or hostname of a syslog server')
@@ -116,7 +116,7 @@ def _read_config(config_path):
 
 def _merge_args_and_config(args, config):
     dirs = ["/tmp"]
-    port = 514
+    syslog_port = 514
     syslog_server = "127.0.0.1"
     protocol = "udp"
     log_file = _get_default_log_file()
@@ -127,10 +127,10 @@ def _merge_args_and_config(args, config):
     elif 'dirs' in config['DEFAULT']:
         dirs = config['DEFAULT']['dirs'].split(',')
 
-    if args.port is not None:
-        port = args.port
-    elif 'port' in config['DEFAULT']:
-        port = int(config['DEFAULT']['port'])
+    if args.syslog_port is not None:
+        syslog_port = args.syslog_port
+    elif 'syslog_port' in config['DEFAULT']:
+        syslog_port = int(config['DEFAULT']['syslog_port'])
 
     if args.syslog_server is not None:
         syslog_server = args.syslog_server
@@ -154,7 +154,7 @@ def _merge_args_and_config(args, config):
         debug = True if config['DEFAULT']['debug'] == 'True' else False
 
 
-    options = Options(dirs=dirs, port=port, syslog_server=syslog_server,
+    options = Options(dirs=dirs, syslog_port=syslog_port, syslog_server=syslog_server,
                       protocol=protocol, log_file=log_file, debug=debug)
 
     _raise_on_invalid_options(options)
@@ -162,17 +162,17 @@ def _merge_args_and_config(args, config):
     return options
 
 def _raise_on_invalid_options(options):
-    _raise_on_invalid_port(options.port)
+    _raise_on_invalid_syslog_port(options.syslog_port)
     _raise_on_invalid_protocol(options.protocol)
 
     for dir in options.dirs:
         _raise_on_invalid_dir(dir)
 
-def _raise_on_invalid_port(port):
-    if not isinstance(port, int):
+def _raise_on_invalid_syslog_port(syslog_port):
+    if not isinstance(syslog_port, int):
         raise TypeError(INVALID_PORT_ERROR)
 
-    if port < 1 or port > 65535:
+    if syslog_port < 1 or syslog_port > 65535:
         raise ValueError(INVALID_PORT_ERROR)
 
 def _raise_on_invalid_dir(dir):
@@ -198,7 +198,7 @@ def configure_logging(debug, syslog_server, syslog_port, log_file):
 def _log_config_options(options):
     _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
     _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
-    _LOGGER.info('Option "port": %s', options.port)
+    _LOGGER.info('Option "syslog_port": %s', options.syslog_port)
     _LOGGER.info('Option "protocol": %s', options.protocol)
     _LOGGER.info('Option "log_file": %s', options.log_file)
     _LOGGER.info('Option "debug": %s', options.debug)
