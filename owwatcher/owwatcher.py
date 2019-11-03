@@ -30,17 +30,18 @@ _PROCESS_EVENTS = True
 Options = collections.namedtuple('Options', 'dirs port syslog_server protocol log_file debug')
 
 def main():
-    register_signal_handlers()
-
     try:
         (parser, args) = _parse_args()
         config = _read_config(args.config_path)
         options = _merge_args_and_config(args, config)
+        configure_logging(options.debug, options.syslog_server, options.port, options.log_file)
+        register_signal_handlers()
     except Exception as ex:
-        print("Error: %s" % str(ex), file=sys.stderr)
+        print("Error during initialization: %s" % str(ex), file=sys.stderr)
         sys.exit(1)
 
-    configure_logging(options.debug, options.syslog_server, options.port, options.log_file)
+    _LOGGER.info("Starting owwatcher...")
+    _log_config_options(options)
 
     for dir in options.dirs:
         owwatcher_thread = threading.Thread(target=watch_for_world_writable_files, args=(dir,), daemon=True)
@@ -194,6 +195,14 @@ def configure_logging(debug, syslog_server, syslog_port, log_file):
     _LOGGER = logger_configurer.get_owwatcher_logger()
     _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 
+def _log_config_options(options):
+    _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
+    _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
+    _LOGGER.info('Option "port": %s', options.port)
+    _LOGGER.info('Option "protocol": %s', options.protocol)
+    _LOGGER.info('Option "log_file": %s', options.log_file)
+    _LOGGER.info('Option "debug": %s', options.debug)
+
 def watch_for_world_writable_files(dir):
     while True:
         try:
@@ -203,7 +212,7 @@ def watch_for_world_writable_files(dir):
                 (headers, type_names, path, filename) = event
 
                 _LOGGER.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
-                      path, filename, type_names))
+                              path, filename, type_names))
                 process_event(event)
         except inotify.adapters.TerminalEventException as tex:
             time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is received
