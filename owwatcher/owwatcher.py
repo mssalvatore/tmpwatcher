@@ -114,10 +114,8 @@ def _merge_args_and_config(args, config):
     debug = False
 
     if args.dirs is not None:
-        print(args.dirs)
         dirs = args.dirs.split(',')
     elif 'dirs' in config['DEFAULT']:
-        print(config['DEFAULT']['dirs'])
         dirs = config['DEFAULT']['dirs'].split(',')
 
     if args.port is not None:
