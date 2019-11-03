@@ -86,11 +86,6 @@ A test coverage report can be viewed by pointing your browser at
    writable. It would simplify the work of the researcher if it could also make
    an attempt to determine what process created the file.
 
-1. This tool should be daemonized so that it runs automatically on boot. This
-   may require that it get its options from a config file, rather than command
-   line arguments. A packaging solution other than pip may also be required to
-   achive this end.
-
 1. Sometimes rsyslog shows the same messages more than once, even though they
    were only sent once. I've yet to determine whether or not this is the fault
    of this tool, the python syslog handler, or rsyslog itself.
