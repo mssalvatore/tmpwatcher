@@ -1,7 +1,8 @@
 # owwatcher
 
 Detects when world-writable directories or files are created in a specific
-directory. This is useful for passively discovering TOCTOU vulnerabilities.
+directory. This is useful for passively discovering symlink race or TOCTOU
+vulnerabilities.
 
 ## Description
 
@@ -9,6 +10,15 @@ This tool uses inotify to recursively monitor a directory of your choosing
 (usually /tmp). If any world-writable files or directories are created in the
 monitored directory, a notification is sent via the syslog protocol to a syslog
 server of your choosing.
+
+"A symlink race is a kind of software security vulnerability that results from
+a program creating files in an insecure manner. A malicious user can create
+a symbolic link to a file not otherwise accessible to him or her. When the
+privileged program creates a file of the same name as the symbolic link, it
+actually creates the linked-to file instead, possibly inserting content desired
+by the malicious user (see example below), or even provided by the malicious
+user (as input to the program)."
+https://en.wikipedia.org/wiki/Symlink_race
 
 Time-of-check to time-of-use (TOCTOU) vulnerabilities are a kind of race
 condition that occurs between the time a software checks the status of a
@@ -20,17 +30,104 @@ symlinks or otherwise manipulate the world-writable files in order to cross some
 security boundary. For an example of how this attack might work, see
 http://www.cis.syr.edu/~wedu/Teaching/IntrCompSec/LectureNotes_New/Race_Condition.pdf
 
+For a discussion on how to safely create and use files in /tmp, see
+https://www.netmeister.org/blog/mktemp.html.
+
 This tool is **not** intended to detect any kind of malware or intrusion.
 Rather, it is a vulnerability research tool which alerts a researcher of
 potential TOCTOU vulnerabilities as the researcher goes about their daily
 activities. In this way, the researcher takes a passive approach to discovering
 TOCTOU vulnerabilities, rather than a more active approach (e.g. code audits.)
 
+## Runing owwatcher
+
+owwatcher attempts to read a config file. By default, it looks for a config
+file at `/etc/owwatcher.conf` or, if installed as a snap,
+`/var/snap/owwatcher/current/owwatcher.conf`. Command line arguments can be used
+to override the settings in the config file or run owwatcher without a config
+file present. See "Usage" or run `owwatcher --help` for a
+description of available command line arguments.
+
+### Usage
+
+```
+usage: owwatcher [-h] [-c CONFIG_PATH] [-d DIRS] [-p SYSLOG_PORT]
+                 [-s SYSLOG_SERVER] [-t] [-l LOG_FILE] [--debug]
+
+Watch a directory for newly created world writable files and directories. Log
+events to a syslog server.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG_PATH, --config-path CONFIG_PATH
+                        A config file to read settings from. Command line
+                        arguments override values read from the config file.
+                        If the config file does not exist, owwatcher will log
+                        a warning and ignore the specified config file
+                        (default: /etc/owwatcher.conf)
+  -d DIRS, --dirs DIRS  A comma-separated list of directories to watch for
+                        world writable files/dirs (default: None)
+  -p SYSLOG_PORT, --syslog_port SYSLOG_PORT
+                        The port that the syslog server is listening on
+                        (default: None)
+  -s SYSLOG_SERVER, --syslog-server SYSLOG_SERVER
+                        IP address or hostname of a syslog server (default:
+                        None)
+  -t, --tcp             Use TCP instead of UDP to send syslog messages.
+                        (default: False)
+  -l LOG_FILE, --log-file LOG_FILE
+                        Path to log file (default: None)
+  --debug               Enable debug logging (default: False)
+```
+
+### If installed as a snap
+
+If installed as a snap, owwatcher will run in the background as a daemon. You
+can enable and disable the owwatcher daemon by running `snap start
+--enable owwatcher` and `snap stop --disable owwatcher` respectively.
+
+You can invoke `owwatcher` directly as long as `/snap/bin` is in your $PATH.
+
+By default, configuration and log files will be located at
+`/var/snap/owwatcher/current/`.
+
+### If installed with pip
+
+If this project has been installed using pip, you can simply invoke
+`owwatcher`, assuming the installed script is in your $PATH.
+
+### If installed with virtualenv
+
+If this project has been installed into a virtualenv, it can be run by
+performing the following steps:
+
+```
+$> source venv/bin/activate
+$> owwatcher
+$> deactivate
+```
+
+### Tips
+
+1) Many programs do not consider permissions at all when writing files to
+`/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
+determine what permissions the files are created with. Set your umask to be more
+permissive (i.e. `umask 0000`) in order to catch more flies. <span
+style="color:red">**WARNING:**</span> Opening up your umask like this is
+insecure. Only do this if you understand the risks.
+
 ## Installation
+
+### snap
+
+This project can be installed by using snap:
+
+`snap install owwatcher`
 
 ### pip
 
 This project can be installed using pip:
+
 `pip install --user .`
 
 ### virtualenv
@@ -44,32 +141,20 @@ $> pip install .
 $> deactivate
 ```
 
-## Runing owwatcher
+## Development
 
-If this project has been installed using pip, you can simply invoke
-`owwatcher`, assuming the installed script is in your $PATH.
-
-If this project has been installed into a virtualenv, it can be run by
-performing the following steps:
-
-```
-$> source venv/bin/activate
-$> owwatcher
-$> deactivate
-```
-
-## Test Suite
+### Test Suite
 
 The test suite requires you install pytest: `pip install --user pytest`
 
 To run the test suite, execute `python setup.py test`
 
-### Test Coverage
+#### Test Coverage
 
 A test coverage report can be viewed by pointing your browser at
 ./htmlcov/index.html
 
-## Limitations and Future Work
+### Limitations and Future Work
 
 1. Currently, this tool must be run as root if you want to observe /tmp. It
    uses the recursive capability of the [python
