@@ -46,9 +46,6 @@ $> deactivate
 
 ## Runing owwatcher
 
-This project can be run directly from this repository by running `python
-owwatcher/owwatcher.py` in the top level directory.
-
 If this project has been installed using pip, you can simply invoke
 `owwatcher`, assuming the installed script is in your $PATH.
 
