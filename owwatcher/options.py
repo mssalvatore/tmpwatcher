@@ -22,7 +22,7 @@ class Options:
 
     @staticmethod
     def _merge_syslog_port_option(args, config, default):
-        return Options._merge_single_option('syslog_port', args.syslog_port, config, default)
+        return int(Options._merge_single_option('syslog_port', args.syslog_port, config, default))
 
     @staticmethod
     def _merge_syslog_server_option(args, config, default):
