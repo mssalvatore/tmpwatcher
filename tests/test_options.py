@@ -15,7 +15,7 @@ def mock_args_syslog_port(monkeypatch, syslog_port):
     return args, {"DEFAULT": {}}
 
 def test_syslog_port_not_int(monkeypatch):
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         args, config = mock_args_syslog_port(monkeypatch, "iv")
         options.Options(args, config)
 
