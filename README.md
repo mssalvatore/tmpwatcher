@@ -67,7 +67,7 @@ optional arguments:
                         (default: /etc/owwatcher.conf)
   -d DIRS, --dirs DIRS  A comma-separated list of directories to watch for
                         world writable files/dirs (default: None)
-  -p SYSLOG_PORT, --syslog_port SYSLOG_PORT
+  -p SYSLOG_PORT, --syslog-port SYSLOG_PORT
                         The port that the syslog server is listening on
                         (default: None)
   -s SYSLOG_SERVER, --syslog-server SYSLOG_SERVER

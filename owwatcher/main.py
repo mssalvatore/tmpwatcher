@@ -49,7 +49,7 @@ def _parse_args():
     parser.add_argument('-d', '--dirs', action='store',
                         help='A comma-separated list of directories to watch ' \
                              'for world writable files/dirs')
-    parser.add_argument('-p', '--syslog_port', action='store', type=int,
+    parser.add_argument('-p', '--syslog-port', action='store', type=int,
                         help='The port that the syslog server is listening on')
     parser.add_argument('-s', '--syslog-server', action='store',
                         help='IP address or hostname of a syslog server')
