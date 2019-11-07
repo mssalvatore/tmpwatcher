@@ -1,7 +1,8 @@
-# detect_ow
+# OWWatcher
 
-Detects when world-writable directories or files are created in a specific
-directory. This is useful for passively discovering TOCTOU vulnerabilities.
+OWWatcher detects when world-writable directories or files are created in a
+user-specified directory. This is useful for passively discovering symlink race
+or TOCTOU vulnerabilities.
 
 ## Description
 
@@ -10,8 +11,17 @@ This tool uses inotify to recursively monitor a directory of your choosing
 monitored directory, a notification is sent via the syslog protocol to a syslog
 server of your choosing.
 
-Time-of-check to time-of-use (TOCTOU) vulnerabilities are a kind of race
-condition that occurs between the time a software checks the status of a
+"A symlink race is a kind of software security vulnerability that results from
+a program creating files in an insecure manner. A malicious user can create
+a symbolic link to a file not otherwise accessible to him or her. When the
+privileged program creates a file of the same name as the symbolic link, it
+actually creates the linked-to file instead, possibly inserting content desired
+by the malicious user (see example below), or even provided by the malicious
+user (as input to the program)."
+https://en.wikipedia.org/wiki/Symlink_race
+
+Time-of-check to time-of-use (TOCTOU) vulnerabilities are the result of race
+conditions that occur between the time a software checks the status of a
 resource (in this case, a file or directory) and the time the software actually
 uses the resource. One common way that TOCTOU vulnerabilities are manifested is
 in world-writable files or directories within /tmp. If software creates
@@ -20,17 +30,109 @@ symlinks or otherwise manipulate the world-writable files in order to cross some
 security boundary. For an example of how this attack might work, see
 http://www.cis.syr.edu/~wedu/Teaching/IntrCompSec/LectureNotes_New/Race_Condition.pdf
 
+For a discussion on how to safely create and use files in /tmp, see
+https://www.netmeister.org/blog/mktemp.html.
+
 This tool is **not** intended to detect any kind of malware or intrusion.
 Rather, it is a vulnerability research tool which alerts a researcher of
-potential TOCTOU vulnerabilities as the researcher goes about their daily
-activities. In this way, the researcher takes a passive approach to discovering
-TOCTOU vulnerabilities, rather than a more active approach (e.g. code audits.)
+potential symlink race or TOCTOU vulnerabilities as the researcher goes about
+their daily activities. In this way, the researcher takes a passive approach to
+discovering these vulnerabilities, rather than a more active approach (e.g.
+code audits.)
+
+## Runing OWWatcher
+
+OWWatcher attempts to read options from a config file. By default, it looks for
+a config file at `/etc/owwatcher.conf` or, if installed as a snap,
+`/var/snap/owwatcher/current/owwatcher.conf`. Command line arguments can be used
+to override the settings in the config file or run OWWatcher without a config
+file present. See "Usage" or run `owwatcher --help` for a description of
+available command line arguments.
+
+### Usage
+
+```
+usage: owwatcher [-h] [-c CONFIG_PATH] [-d DIRS] [-p SYSLOG_PORT]
+                 [-s SYSLOG_SERVER] [-t] [-l LOG_FILE] [--debug]
+
+Watch a directory for newly created world writable files and directories. Log
+events to a syslog server.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG_PATH, --config-path CONFIG_PATH
+                        A config file to read settings from. Command line
+                        arguments override values read from the config file.
+                        If the config file does not exist, owwatcher will log
+                        a warning and ignore the specified config file
+                        (default: /etc/owwatcher.conf)
+  -d DIRS, --dirs DIRS  A comma-separated list of directories to watch for
+                        world writable files/dirs (default: None)
+  -p SYSLOG_PORT, --syslog-port SYSLOG_PORT
+                        The port that the syslog server is listening on
+                        (default: None)
+  -s SYSLOG_SERVER, --syslog-server SYSLOG_SERVER
+                        IP address or hostname of a syslog server (default:
+                        None)
+  -t, --tcp             Use TCP instead of UDP to send syslog messages.
+                        (default: False)
+  -l LOG_FILE, --log-file LOG_FILE
+                        Path to log file (default: None)
+  --debug               Enable debug logging (default: False)
+```
+
+### If installed as a snap
+
+If installed as a snap, OWWatcher will run in the background as a daemon. You
+can enable and disable the OWWatcher daemon by running `snap start
+--enable owwatcher` and `snap stop --disable owwatcher` respectively.
+
+You can invoke `owwatcher` directly as long as `/snap/bin` is in your $PATH.
+
+By default, configuration and log files will be located at
+`/var/snap/owwatcher/current/`.
+
+### If installed with pip
+
+If this project has been installed using pip, you can simply invoke
+`owwatcher`, assuming the installed script is in your $PATH.
+
+### If installed with virtualenv
+
+If this project has been installed into a virtualenv, it can be run by
+performing the following steps:
+
+```
+$> source venv/bin/activate
+$> owwatcher
+$> deactivate
+```
+
+### Tips and Notes
+
+1) Many programs do not consider permissions at all when writing files to
+`/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
+determine what permissions the files are created with. Set your umask to be more
+permissive (i.e. `umask 0000`) in order to expose more vulnerabilities. <span
+style="color:red">**WARNING:**</span> Opening up your umask like this is
+insecure. Only do this if you understand the risks.
+
+2) OWWatcher may not catch absolutely everything. Because of the way inotify and
+python inotify module work, there are a number of scenarios where a race
+condition could cause a world writable file to slip under the radar.
 
 ## Installation
+
+### snap
+
+This project can be installed by using snap:
+
+`snap install owwatcher`
 
 ### pip
 
 This project can be installed using pip:
+
 `pip install --user .`
 
 ### virtualenv
@@ -44,60 +146,40 @@ $> pip install .
 $> deactivate
 ```
 
-## Runing detect_ow
+## Development
 
-This project can be run directly from this repository by running `python
-detect_ow/detect_ow.py` in the top level directory.
-
-If this project has been installed using pip, you can simply invoke
-`detect_ow`, assuming the installed script is in your $PATH.
-
-If this project has been installed into a virtualenv, it can be run by
-performing the following steps:
-
-```
-$> source venv/bin/activate
-$> detect_ow
-$> deactivate
-```
-
-## Test Suite
+### Test Suite
 
 The test suite requires you install pytest: `pip install --user pytest`
 
 To run the test suite, execute `python setup.py test`
 
-### Test Coverage
+#### Test Coverage
 
 A test coverage report can be viewed by pointing your browser at
 ./htmlcov/index.html
 
-## Limitations and Future Work
+### Limitations and Future Work
 
-1. Currently, this tool must be run as root. It uses the recursive capability of
-   the [python inotify](https://pypi.org/project/inotify/) library to
-   recursively watch the specified directory. If the user does not have the
-   appropriate permissions to watch all files within the directory, the inotify
-   library fails. An future improvement is planned that would allow the user to
-   specify whether or not to skip files they cannot access.
+1. Currently, this tool must be run as root if you want to observe /tmp. It
+   uses the recursive capability of the [python
+   inotify](https://pypi.org/project/inotify/) library to recursively watch the
+   specified directory. If the user does not have the appropriate permissions
+   to watch all files within the directory, the inotify library fails. A
+   future improvement is planned that would allow the user to specify whether
+   or not to skip files they cannot access.
 
 1. The syslog alerts only show what file or directory was found to be world
    writable. It would simplify the work of the researcher if it could also make
    an attempt to determine what process created the file.
 
-1. This tool should be daemonized so that it runs automatically on boot. This
-   may require that it get its options from a config file, rather than command
-   line arguments. A packaging solution other than pip may also be required to
-   achive this end.
-
-1. The syslog logger also prints to stdout unnecessarily. This needs to be
-   fixed.
-
 1. Sometimes rsyslog shows the same messages more than once, even though they
    were only sent once. I've yet to determine whether or not this is the fault
    of this tool, the python syslog handler, or rsyslog itself.
 
-1. It may be acceptable for some files to be world writable. Add a whitelist
-   capability so that alerts are not raised unnecessarily.
+1. It may be acceptable for some files to be world writable. a whitelist
+   capability to prevent unnecessary alerts would reduce false positives.
 
-1. It would be nice if detect_ow could watch more than one directory at a time.
+1. The test suite doesn't quite have adequate code coverage. Furthermore, some
+   of the tests may be testing "private" functions, rather than public
+   interfaces.
