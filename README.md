@@ -108,7 +108,7 @@ $> owwatcher
 $> deactivate
 ```
 
-### Tips
+### Tips and Notes
 
 1) Many programs do not consider permissions at all when writing files to
 `/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
@@ -116,6 +116,10 @@ determine what permissions the files are created with. Set your umask to be more
 permissive (i.e. `umask 0000`) in order to expose more vulnerabilities. <span
 style="color:red">**WARNING:**</span> Opening up your umask like this is
 insecure. Only do this if you understand the risks.
+
+2) OWWatcher may not catch absolutely everything. Because of the way inotify and
+python inotify module work, there are a number of scenarios where a race
+condition could cause a world writable file to slip under the radar.
 
 ## Installation
 
