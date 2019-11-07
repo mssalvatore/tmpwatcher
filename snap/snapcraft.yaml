@@ -15,7 +15,7 @@ description: |
     discovering TOCTOU vulnerabilities, rather than a more active approach
     (e.g. code audits.)
 
-grade: devel # must be 'stable' to release into candidate/stable channels
+grade: stable
 confinement: classic
 
 parts:
