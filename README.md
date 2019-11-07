@@ -1,8 +1,8 @@
-# owwatcher
+# OWWatcher
 
-Detects when world-writable directories or files are created in a specific
-directory. This is useful for passively discovering symlink race or TOCTOU
-vulnerabilities.
+OWWatcher detects when world-writable directories or files are created in a
+user-specified directory. This is useful for passively discovering symlink race
+or TOCTOU vulnerabilities.
 
 ## Description
 
@@ -20,8 +20,8 @@ by the malicious user (see example below), or even provided by the malicious
 user (as input to the program)."
 https://en.wikipedia.org/wiki/Symlink_race
 
-Time-of-check to time-of-use (TOCTOU) vulnerabilities are a kind of race
-condition that occurs between the time a software checks the status of a
+Time-of-check to time-of-use (TOCTOU) vulnerabilities are the result of race
+conditions that occur between the time a software checks the status of a
 resource (in this case, a file or directory) and the time the software actually
 uses the resource. One common way that TOCTOU vulnerabilities are manifested is
 in world-writable files or directories within /tmp. If software creates
@@ -35,18 +35,19 @@ https://www.netmeister.org/blog/mktemp.html.
 
 This tool is **not** intended to detect any kind of malware or intrusion.
 Rather, it is a vulnerability research tool which alerts a researcher of
-potential TOCTOU vulnerabilities as the researcher goes about their daily
-activities. In this way, the researcher takes a passive approach to discovering
-TOCTOU vulnerabilities, rather than a more active approach (e.g. code audits.)
+potential symlink race or TOCTOU vulnerabilities as the researcher goes about
+their daily activities. In this way, the researcher takes a passive approach to
+discovering these vulnerabilities, rather than a more active approach (e.g.
+code audits.)
 
-## Runing owwatcher
+## Runing OWWatcher
 
-owwatcher attempts to read a config file. By default, it looks for a config
-file at `/etc/owwatcher.conf` or, if installed as a snap,
+OWWatcher attempts to read options from a config file. By default, it looks for
+a config file at `/etc/owwatcher.conf` or, if installed as a snap,
 `/var/snap/owwatcher/current/owwatcher.conf`. Command line arguments can be used
-to override the settings in the config file or run owwatcher without a config
-file present. See "Usage" or run `owwatcher --help` for a
-description of available command line arguments.
+to override the settings in the config file or run OWWatcher without a config
+file present. See "Usage" or run `owwatcher --help` for a description of
+available command line arguments.
 
 ### Usage
 
@@ -82,8 +83,8 @@ optional arguments:
 
 ### If installed as a snap
 
-If installed as a snap, owwatcher will run in the background as a daemon. You
-can enable and disable the owwatcher daemon by running `snap start
+If installed as a snap, OWWatcher will run in the background as a daemon. You
+can enable and disable the OWWatcher daemon by running `snap start
 --enable owwatcher` and `snap stop --disable owwatcher` respectively.
 
 You can invoke `owwatcher` directly as long as `/snap/bin` is in your $PATH.
@@ -112,7 +113,7 @@ $> deactivate
 1) Many programs do not consider permissions at all when writing files to
 `/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
 determine what permissions the files are created with. Set your umask to be more
-permissive (i.e. `umask 0000`) in order to catch more flies. <span
+permissive (i.e. `umask 0000`) in order to expose more vulnerabilities. <span
 style="color:red">**WARNING:**</span> Opening up your umask like this is
 insecure. Only do this if you understand the risks.
 
@@ -174,3 +175,7 @@ A test coverage report can be viewed by pointing your browser at
 
 1. It may be acceptable for some files to be world writable. a whitelist
    capability to prevent unnecessary alerts would reduce false positives.
+
+1. The test suite doesn't quite have adequate code coverage. Furthermore, some
+   of the tests may be testing "private" functions, rather than public
+   interfaces.
