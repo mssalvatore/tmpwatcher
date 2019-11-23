@@ -172,14 +172,12 @@ def test_args_override_debug(monkeypatch, config):
     assert opt.log_file == config['DEFAULT']['log_file']
     assert opt.debug == expected_debug
 
-def test_get_default_config_file(monkeypatch):
-    monkeypatch.delenv('SNAP_DATA', raising=False)
-
+def test_get_default_config_file():
     expected_config_file = '/etc/owwatcher.conf'
-    assert expected_config_file == options.Options.get_default_config_file()
+    assert expected_config_file == options.Options.get_default_config_file(False)
 
 def test_get_default_config_file_snap(monkeypatch):
     monkeypatch.setenv('SNAP_DATA', '/var/snap/TESTING')
 
     expected_config_file = '/var/snap/TESTING/owwatcher.conf'
-    assert expected_config_file == options.Options.get_default_config_file()
+    assert expected_config_file == options.Options.get_default_config_file(True)
