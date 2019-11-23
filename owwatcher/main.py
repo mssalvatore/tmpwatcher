@@ -25,7 +25,7 @@ def main():
         config = _read_config(args.config_path)
         options = Options(args, config, is_snap)
         configure_logging(options.debug, options.syslog_server, options.syslog_port, options.log_file)
-        _OWWATCHER = OWWatcher(_LOGGER, _SYSLOG_LOGGER)
+        _OWWATCHER = OWWatcher(_LOGGER, _SYSLOG_LOGGER, is_snap)
         register_signal_handlers()
     except Exception as ex:
         print("Error during initialization: %s" % str(ex), file=sys.stderr)
