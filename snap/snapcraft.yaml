@@ -16,7 +16,13 @@ description: |
     a more active approach (e.g. code audits.)
 
 grade: stable
-confinement: classic
+confinement: strict
+
+plugs:
+    hostfs:
+        interface: system-files
+        read:
+            - /var/lib/snapd/hostfs
 
 parts:
     owwatcher:
@@ -27,6 +33,14 @@ parts:
 apps:
     owwatcher:
         command: bin/owwatcher
+        plugs:
+            - network
+            - hostfs
+            - log-observe
     owwatcherd:
         command: bin/owwatcher
+        plugs:
+            - network
+            - hostfs
+            - log-observe
         daemon: simple
