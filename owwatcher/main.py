@@ -4,6 +4,7 @@ import argparse
 import collections
 import configparser
 from .options import Options
+import os
 from .owwatcher_logger_configurer import OWWatcherLoggerConfigurer
 from .owwatcher import OWWatcher
 import signal
@@ -19,11 +20,12 @@ _OWWATCHER = None
 def main():
     global _OWWATCHER
     try:
-        (parser, args) = _parse_args()
+        is_snap = check_if_snap()
+        (parser, args) = _parse_args(is_snap)
         config = _read_config(args.config_path)
-        options = Options(args, config)
+        options = Options(args, config, is_snap)
         configure_logging(options.debug, options.syslog_server, options.syslog_port, options.log_file)
-        _OWWATCHER = OWWatcher(_LOGGER, _SYSLOG_LOGGER)
+        _OWWATCHER = OWWatcher(_LOGGER, _SYSLOG_LOGGER, is_snap)
         register_signal_handlers()
     except Exception as ex:
         print("Error during initialization: %s" % str(ex), file=sys.stderr)
@@ -34,8 +36,11 @@ def main():
 
     _OWWATCHER.run(options.dirs)
 
-def _parse_args():
-    default_config_file = Options.get_default_config_file()
+def check_if_snap():
+    return 'SNAP_DATA' in os.environ
+
+def _parse_args(is_snap):
+    default_config_file = Options.get_default_config_file(is_snap)
 
     parser = argparse.ArgumentParser(
             description="Watch a directory for newly created world writable "\

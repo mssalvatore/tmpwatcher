@@ -6,11 +6,11 @@ class Options:
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
 
-    def __init__(self, args, config):
+    def __init__(self, args, config, is_snap=False):
         self.dirs = Options._merge_dirs_option(args, config, "/tmp")
         self.syslog_port = Options._merge_syslog_port_option(args, config, 514)
         self.syslog_server = Options._merge_syslog_server_option(args, config, "127.0.0.1")
-        self.log_file = Options._merge_log_file_option(args, config, Options._get_default_log_file())
+        self.log_file = Options._merge_log_file_option(args, config, Options._get_default_log_file(is_snap))
         self.protocol = Options._merge_protocol_option(args, config, "udp")
         self.debug = Options._merge_debug_option(args, config, False)
 
@@ -90,16 +90,16 @@ class Options:
             raise ValueError(Options.INVALID_DEBUG_ERROR % debug)
 
     @staticmethod
-    def get_default_config_file():
-        return Options._get_default_file_path('/etc/', 'owwatcher.conf')
+    def get_default_config_file(is_snap):
+        return Options._get_default_file_path('/etc/', 'owwatcher.conf', is_snap)
 
     @staticmethod
-    def _get_default_log_file():
-        return Options._get_default_file_path('/var/log', 'owwatcher.log')
+    def _get_default_log_file(is_snap):
+        return Options._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
 
     @staticmethod
-    def _get_default_file_path(default_path, file_name):
-        if 'SNAP_DATA' in os.environ:
+    def _get_default_file_path(default_path, file_name, is_snap):
+        if is_snap:
             return os.path.join(os.getenv('SNAP_DATA'), file_name)
 
         return os.path.join(default_path, file_name)
