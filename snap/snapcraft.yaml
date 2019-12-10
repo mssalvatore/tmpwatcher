@@ -18,12 +18,6 @@ description: |
 grade: stable
 confinement: strict
 
-plugs:
-    hostfs:
-        interface: system-files
-        read:
-            - /var/lib/snapd/hostfs
-
 parts:
     owwatcher:
         plugin: python
@@ -35,12 +29,10 @@ apps:
         command: bin/owwatcher
         plugs:
             - network
-            - hostfs
-            - log-observe
+            - system-backup
     owwatcherd:
         command: bin/owwatcher
         plugs:
             - network
-            - hostfs
-            - log-observe
+            - system-backup
         daemon: simple
