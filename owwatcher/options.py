@@ -1,7 +1,7 @@
 import os
 
 class Options:
-    INVALID_DIR_ERROR = "The directory '%s' does not exist"
+    INVALID_DIR_ERROR = "The directory '%s' does not exist."
     INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
