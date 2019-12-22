@@ -2,12 +2,15 @@ import os
 
 class Options:
     INVALID_DIR_ERROR = "The directory '%s' does not exist."
+    PERMS_FORMAT_MSG = "The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive."
+    INVALID_PERMS_ERROR = "%s is an invalid permissions mask. " + PERMS_FORMAT_MSG
     INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
 
     def __init__(self, args, config, is_snap=False):
         self.dirs = Options._merge_dirs_option(args, config, "/tmp")
+        self.perms_mask = Options._merge_perms_mask_option(args, config, None)
         self.syslog_port = Options._merge_syslog_port_option(args, config, 514)
         self.syslog_server = Options._merge_syslog_server_option(args, config, "127.0.0.1")
         self.log_file = Options._merge_log_file_option(args, config, Options._get_default_log_file(is_snap))
@@ -19,6 +22,10 @@ class Options:
     @staticmethod
     def _merge_dirs_option(args, config, default):
         return Options._merge_single_option('dirs', args.dirs, config, default).split(',')
+
+    @staticmethod
+    def _merge_perms_mask_option(args, config, default):
+        return Options._merge_single_option('perms_mask', args.perms_mask, config, default)
 
     @staticmethod
     def _merge_syslog_port_option(args, config, default):
@@ -64,9 +71,20 @@ class Options:
         return default
 
     def _raise_on_invalid_options(self):
+        self._raise_on_invalid_perms_mask()
         self._raise_on_invalid_syslog_port()
         self._raise_on_invalid_protocol()
         self._raise_on_invalid_dir()
+
+    def _raise_on_invalid_perms_mask(self):
+        if self.perms_mask is None:
+            return
+
+        if not isinstance(self.perms_mask, int):
+            raise TypeError(Options.PERMS_FORMAT_MSG )
+
+        if self.perms_mask < 0 or self.perms_mask > 0o777:
+                raise ValueError(Options.INVALID_PERMS_ERROR % format(self.perms_mask, 'o'))
 
     def _raise_on_invalid_syslog_port(self):
         if not isinstance(self.syslog_port, int):
