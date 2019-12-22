@@ -39,6 +39,9 @@ def main():
 def check_if_snap():
     return 'SNAP_DATA' in os.environ
 
+def _octal_int(x):
+        return int(x, 8)
+
 def _parse_args(is_snap):
     default_config_file = Options.get_default_config_file(is_snap)
 
@@ -54,6 +57,10 @@ def _parse_args(is_snap):
     parser.add_argument('-d', '--dirs', action='store',
                         help='A comma-separated list of directories to watch ' \
                              'for world writable files/dirs')
+    parser.add_argument('-m', '--perms-mask', action='store',
+                        help='Instead of alerting only on world writable files, ' \
+                             'use a mask (e.g. 077) to identify files with ' \
+                             'incorrect permissions', type=_octal_int)
     parser.add_argument('-p', '--syslog-port', action='store', type=int,
                         help='The port that the syslog server is listening on')
     parser.add_argument('-s', '--syslog-server', action='store',
@@ -96,11 +103,18 @@ def receive_signal(signum, stack_frame):
 
 def _log_config_options(options):
     _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
+    _LOGGER.info('Option "perms_mask": %s', _format_perms_mask_output(options))
     _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
     _LOGGER.info('Option "syslog_port": %s', options.syslog_port)
     _LOGGER.info('Option "protocol": %s', options.protocol)
     _LOGGER.info('Option "log_file": %s', options.log_file)
     _LOGGER.info('Option "debug": %s', options.debug)
+
+def _format_perms_mask_output(options):
+    if options.perms_mask is None:
+        return "None"
+
+    return "{:03o}".format(options.perms_mask)
 
 if __name__ == "__main__":
     main()
