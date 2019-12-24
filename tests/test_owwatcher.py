@@ -9,7 +9,7 @@ def owwatcher_object():
     null_logger = logging.getLogger('owwatcher.null')
     null_logger.addHandler(logging.NullHandler)
 
-    return owwatcher.OWWatcher(null_logger, null_logger)
+    return owwatcher.OWWatcher([], null_logger, null_logger)
 
 def test_has_interesting_events_false(owwatcher_object):
     interesting_events = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
