@@ -26,39 +26,39 @@ def test_has_interesting_events_true(owwatcher_object):
     received_events = ["IN_MOVED_TO"]
     assert owwatcher_object._has_interesting_events(received_events, interesting_events)
 
-MockStat = collections.namedtuple('MockStat', 'st_mode')
-def mock_stat(monkeypatch, mode):
-    ms = MockStat(st_mode=mode)
-    monkeypatch.setattr(os, "stat", lambda _: ms)
+Stat = collections.namedtuple('Stat', 'st_mode')
+def patch_stat(monkeypatch, mode):
+    stat = Stat(st_mode=mode)
+    monkeypatch.setattr(os, "stat", lambda _: stat)
 
 def test_is_world_writable_true(monkeypatch, owwatcher_object):
     path = "/tmp/random_dir_kljafl"
     filename = "test_file"
 
-    mock_stat(monkeypatch, 0o006)
+    patch_stat(monkeypatch, 0o006)
     assert owwatcher_object._is_world_writable(path, filename)
 
-    mock_stat(monkeypatch, 0o777)
+    patch_stat(monkeypatch, 0o777)
     assert owwatcher_object._is_world_writable(path, filename)
 
-    mock_stat(monkeypatch, 0o002)
+    patch_stat(monkeypatch, 0o002)
     assert owwatcher_object._is_world_writable(path, filename)
 
-    mock_stat(monkeypatch, 0o666)
+    patch_stat(monkeypatch, 0o666)
     assert owwatcher_object._is_world_writable(path, filename)
 
 def test_is_world_writable_false(monkeypatch, owwatcher_object):
     path = "/tmp/random_dir_kljafl"
     filename = "test_file"
 
-    mock_stat(monkeypatch, 0o004)
+    patch_stat(monkeypatch, 0o004)
     assert not owwatcher_object._is_world_writable(path, filename)
 
-    mock_stat(monkeypatch, 0o770)
+    patch_stat(monkeypatch, 0o770)
     assert not owwatcher_object._is_world_writable(path, filename)
 
-    mock_stat(monkeypatch, 0o641)
+    patch_stat(monkeypatch, 0o641)
     assert not owwatcher_object._is_world_writable(path, filename)
 
-    mock_stat(monkeypatch, 0o665)
+    patch_stat(monkeypatch, 0o665)
     assert not owwatcher_object._is_world_writable(path, filename)
