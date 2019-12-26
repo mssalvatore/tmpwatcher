@@ -7,7 +7,7 @@ import logging
 @pytest.fixture
 def owwatcher_object():
     null_logger = logging.getLogger('owwatcher.null')
-    null_logger.addHandler(logging.NullHandler)
+    null_logger.addHandler(logging.NullHandler())
 
     return owwatcher.OWWatcher([], null_logger, null_logger)
 

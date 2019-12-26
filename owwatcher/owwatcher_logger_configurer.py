@@ -72,7 +72,7 @@ class OWWatcherLoggerConfigurer:
     @staticmethod
     def get_null_logger():
         null_logger = logging.getLogger('owwatcher.null')
-        null_logger.addHandler(logging.NullHandler)
+        null_logger.addHandler(logging.NullHandler())
 
         return null_logger
 
