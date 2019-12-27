@@ -126,6 +126,8 @@ this shortcoming:
     that should raise alerts. For example, if your umask is set to 027, setting
     `--perms-mask` to 050 (or, even better, 077), can help identify symlink race
     vulnerabilities that have been mitigated by a properly configured umask.
+	Note that the `perms_mask` option can also be added to the config file (e.g.
+	`perms_mask=077`)
 
     ii. Set your umask to be more permissive (i.e. `umask 0000`) in order to
     expose more vulnerabilities. <span style="color:red">**WARNING:**</span>
