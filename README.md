@@ -68,6 +68,10 @@ optional arguments:
                         (default: /etc/owwatcher.conf)
   -d DIRS, --dirs DIRS  A comma-separated list of directories to watch for
                         world writable files/dirs (default: None)
+  -m PERMS_MASK, --perms-mask PERMS_MASK
+                        Instead of alerting only on world writable files, use
+                        a mask (e.g. 077) to identify files with incorrect
+                        permissions (default: None)
   -p SYSLOG_PORT, --syslog-port SYSLOG_PORT
                         The port that the syslog server is listening on
                         (default: None)
@@ -110,14 +114,25 @@ $> deactivate
 
 ### Tips and Notes
 
-1) Many programs do not consider permissions at all when writing files to
+1. Many programs do not consider permissions at all when writing files to
 `/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
-determine what permissions the files are created with. Set your umask to be more
-permissive (i.e. `umask 0000`) in order to expose more vulnerabilities. <span
-style="color:red">**WARNING:**</span> Opening up your umask like this is
-insecure. Only do this if you understand the risks.
+determine what permissions the files are created with. This means that a
+properly configured umask can mitigate a potential symlink race vulnerability in
+some appllications. It also means that, in these cases, OWWatcher may not be
+effective in identifying potential vulnerabilities. There are two ways to remedy
+this shortcoming:
 
-2) OWWatcher may not catch absolutely everything. Because of the way inotify and
+    i. Use the `--perms-mask` option to specify permissions other than `o+w`
+    that should raise alerts. For example, if your umask is set to 027, setting
+    `--perms-mask` to 050 (or, even better, 077), can help identify symlink race
+    vulnerabilities that have been mitigated by a properly configured umask.
+
+    ii. Set your umask to be more permissive (i.e. `umask 0000`) in order to
+    expose more vulnerabilities. <span style="color:red">**WARNING:**</span>
+    Opening up your umask like this is insecure. Only do this if you understand
+    the risks.
+
+1. OWWatcher may not catch absolutely everything. Because of the way inotify and
 python inotify module work, there are a number of scenarios where a race
 condition could cause a world writable file to slip under the radar.
 
