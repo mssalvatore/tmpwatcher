@@ -25,7 +25,15 @@ class Options:
 
     @staticmethod
     def _merge_perms_mask_option(args, config, default):
-        return Options._merge_single_option('perms_mask', args.perms_mask, config, default)
+        mask = Options._merge_single_option('perms_mask', args.perms_mask, config, default)
+
+        if isinstance(mask, int) or mask is None:
+            return mask
+
+        try:
+            return int(mask, 8)
+        except ValueError:
+            raise TypeError(Options.PERMS_FORMAT_MSG)
 
     @staticmethod
     def _merge_syslog_port_option(args, config, default):
@@ -81,7 +89,7 @@ class Options:
             return
 
         if not isinstance(self.perms_mask, int):
-            raise TypeError(Options.PERMS_FORMAT_MSG )
+            raise TypeError(Options.PERMS_FORMAT_MSG)
 
         if self.perms_mask < 0 or self.perms_mask > 0o777:
                 raise ValueError(Options.INVALID_PERMS_ERROR % format(self.perms_mask, 'o'))
