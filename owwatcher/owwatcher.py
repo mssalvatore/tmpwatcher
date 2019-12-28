@@ -122,9 +122,9 @@ class OWWatcher():
         self._send_syslog_perms_alert(watch_dir, path, filename, msg)
 
     def _send_syslog_perms_alert(self, watch_dir, path, filename, msg):
-        event_path = self._strip_snap_prefix_from_event_path(path, filename)
+        (full_path, event_path) = self._strip_snap_prefix_from_event_path(path, filename)
 
-        file_or_dir = "directory" if os.path.isdir(event_path) else "file"
+        file_or_dir = "directory" if os.path.isdir(full_path) else "file"
         msg = "%s %s: %s" % (msg, file_or_dir, event_path)
 
         mask = DEFAULT_OW_MASK
@@ -140,12 +140,13 @@ class OWWatcher():
             self.syslog_logger.warning(msg)
 
     def _strip_snap_prefix_from_event_path(self, path, filename):
-        event_path = os.path.join(path, filename)
+        full_path = os.path.join(path, filename)
 
+        event_path = full_path
         if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
             event_path = event_path[len(SNAP_HOSTFS_PATH_PREFIX):]
 
-        return event_path
+        return (full_path, event_path)
 
     def all_dirs_in_path_match_mask(self, watch_dir, path, mask):
         if path.rstrip('/') == watch_dir.rstrip('/') :
