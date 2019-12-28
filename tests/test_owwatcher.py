@@ -179,6 +179,16 @@ def test_process_event_ow_snap_path(monkeypatch, owwatcher_object):
     assert owwatcher_object.alert_sent_warning
     assert owwatcher_object.warning_msg == "Found world writable file: /tmp/dir1/dir2/a_file"
 
+def test_process_event_ow_snap_dir(monkeypatch, owwatcher_object):
+    event = (None, ["IN_CREATE", "IN_DELETE"], "%s/tmp" % owwatcher.SNAP_HOSTFS_PATH_PREFIX, "dir1")
+    patch_stat(monkeypatch, [0o002])
+    monkeypatch.setattr(os.path, "isdir", lambda _: True)
+
+    owwatcher_object.is_snap = True
+    owwatcher_object._process_event(owwatcher.SNAP_HOSTFS_PATH_PREFIX + "/tmp", event)
+    assert owwatcher_object.alert_sent_warning
+    assert owwatcher_object.warning_msg == "Found world writable directory: /tmp/dir1"
+
 def test_process_event_directory_protects_ow_file(monkeypatch, owwatcher_object):
     event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o702, 0o702, 0o700])
