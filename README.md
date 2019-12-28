@@ -135,8 +135,15 @@ this shortcoming:
     the risks.
 
 1. OWWatcher may not catch absolutely everything. Because of the way inotify and
-python inotify module work, there are a number of scenarios where a race
-condition could cause a world writable file to slip under the radar.
+the python inotify module work, there are a number of scenarios where a race
+condition could cause a world writable file to slip under the radar. One example
+of such a race condition is when a new file is created and then deleted before
+OWWatcher can check its permissions. You can reduce the effects of this
+particular race condition by using strace to introduce a delay into the `mkdir`
+and `openat` system calls. It may be necessary to add other system calls to this
+list as well.
+
+    **Example**: `strace -e inject=mkdir,openat:delay_exit=100000 <COMMAND>`
 
 ## Installation
 
