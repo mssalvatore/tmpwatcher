@@ -11,10 +11,6 @@ class OWWatcherTest(owwatcher.OWWatcher):
         self.warning_msg = ""
         monkeypatch.setattr(syslog_logger, "warning", self.warning)
 
-    def reset(self):
-        self.alert_sent = False
-        self.warning_msg = ""
-
     def warning(self, msg):
         self.alert_sent = True
         self.warning_msg = msg
