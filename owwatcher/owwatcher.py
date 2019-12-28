@@ -17,6 +17,7 @@ SNAP_HOSTFS_PATH_PREFIX = "/var/lib/snapd/hostfs"
 VULNERABILITY_MITIGATED_MSG = " -- Vulnerabilities are potentially mitigated as " \
                               "one or more parent directories do not have " \
                               "improperly configured permissions"
+DEFAULT_OW_MASK = 0o002
 
 class OWWatcher():
     EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
@@ -95,7 +96,7 @@ class OWWatcher():
 
     def _is_world_writable(self, path, filename):
         self.logger.debug("Checking if file %s at path %s is world writable" % (filename, path))
-        return self._check_perms(path, filename, 0o002)
+        return self._check_perms(path, filename, DEFAULT_OW_MASK)
 
     def _check_perms_mask(self, path, filename):
         self.logger.debug("Checking if file %s at path %s against the configured permissions mask" % (filename, path))
@@ -126,7 +127,7 @@ class OWWatcher():
         file_or_dir = "directory" if os.path.isdir(event_path) else "file"
         msg = "%s %s: %s" % (msg, file_or_dir, event_path)
 
-        mask = 0o002
+        mask = DEFAULT_OW_MASK
         if self.perms_mask is not None:
             mask = self.perms_mask
 
