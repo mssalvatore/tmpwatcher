@@ -108,6 +108,7 @@ class OWWatcher():
             self.logger.debug("Checking permissions of %s against mask %s" % (full_path, "{:03o}".format(mask)))
 
             status = os.stat(full_path)
+            self.logger.debug("Permissions of %s are %s" % (full_path, "{:03o}".format(status.st_mode)))
 
             return status.st_mode & mask
         except (FileNotFoundError)as fnf:
