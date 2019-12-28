@@ -99,7 +99,7 @@ class OWWatcher():
         return self._check_perms(path, filename, DEFAULT_OW_MASK)
 
     def _check_perms_mask(self, path, filename):
-        self.logger.debug("Checking if file %s at path %s against the configured permissions mask" % (filename, path))
+        self.logger.debug("Checking file %s at path %s against the configured permissions mask" % (filename, path))
         return self._check_perms(path, filename, self.perms_mask)
 
     def _check_perms(self, path, filename, mask):
