@@ -126,6 +126,8 @@ this shortcoming:
     that should raise alerts. For example, if your umask is set to 027, setting
     `--perms-mask` to 050 (or, even better, 077), can help identify symlink race
     vulnerabilities that have been mitigated by a properly configured umask.
+	Note that the `perms_mask` option can also be added to the config file (e.g.
+	`perms_mask=077`)
 
     ii. Set your umask to be more permissive (i.e. `umask 0000`) in order to
     expose more vulnerabilities. <span style="color:red">**WARNING:**</span>
@@ -133,8 +135,15 @@ this shortcoming:
     the risks.
 
 1. OWWatcher may not catch absolutely everything. Because of the way inotify and
-python inotify module work, there are a number of scenarios where a race
-condition could cause a world writable file to slip under the radar.
+the python inotify module work, there are a number of scenarios where a race
+condition could cause a world writable file to slip under the radar. One example
+of such a race condition is when a new file is created and then deleted before
+OWWatcher can check its permissions. You can reduce the effects of this
+particular race condition by using strace to introduce a delay into the `mkdir`
+and `openat` system calls. It may be necessary to add other system calls to this
+list as well.
+
+    **Example**: `strace -e inject=mkdir,openat:delay_exit=100000 <COMMAND>`
 
 ## Installation
 
@@ -194,7 +203,3 @@ A test coverage report can be viewed by pointing your browser at
 
 1. It may be acceptable for some files to be world writable. a whitelist
    capability to prevent unnecessary alerts would reduce false positives.
-
-1. The test suite doesn't quite have adequate code coverage. Furthermore, some
-   of the tests may be testing "private" functions, rather than public
-   interfaces.
