@@ -203,7 +203,3 @@ A test coverage report can be viewed by pointing your browser at
 
 1. It may be acceptable for some files to be world writable. a whitelist
    capability to prevent unnecessary alerts would reduce false positives.
-
-1. The test suite doesn't quite have adequate code coverage. Furthermore, some
-   of the tests may be testing "private" functions, rather than public
-   interfaces.
