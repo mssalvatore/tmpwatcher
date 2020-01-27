@@ -46,17 +46,17 @@ class OWWatcher():
         self.process_events = False
 
     def _watch_for_world_writable_files(self, watch_dir):
+        self.logger.info("Setting up inotify watches on %s and its subdirectories" % watch_dir)
+
+        if self.is_snap:
+            watch_dir = watch_dir.strip('/')
+            watch_dir = os.path.join(SNAP_HOSTFS_PATH_PREFIX, watch_dir)
+            self.logger.debug("It was detected that this application is"\
+                    " running as a snap. Actual inotify watch set up on"\
+                    " dir %s" % watch_dir)
+
         while True:
             try:
-                self.logger.info("Setting up inotify watches on %s and its subdirectories" % watch_dir)
-
-                if self.is_snap:
-                    watch_dir = watch_dir.strip('/')
-                    watch_dir = os.path.join(SNAP_HOSTFS_PATH_PREFIX, watch_dir)
-                    self.logger.debug("It was detected that this application is"\
-                            " running as a snap. Actual inotify watch set up on"\
-                            " dir %s" % watch_dir)
-
                 i = inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
 
                 for event in i.event_gen(yield_nones=False):
