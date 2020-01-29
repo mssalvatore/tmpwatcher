@@ -1,4 +1,6 @@
 name: owwatcher
+architectures:
+    - build-on: [amd64, i386, arm64]
 base: core18
 version: git
 summary: Detects when world-writable files are created in a specified directory
@@ -6,7 +8,7 @@ description: |
     This tool monitors a directory of your choosing (usually /tmp) in real
     time. If any world-writable files or directories are created in the
     monitored directory, a notification is sent via the syslog protocol to a
-    syslog server of your choosing. 
+    syslog server of your choosing.
 
     This tool is not intended to detect any kind of malware or intrusion.
     Rather, it is a vulnerability research tool which alerts a researcher of
