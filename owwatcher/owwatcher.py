@@ -76,6 +76,8 @@ class OWWatcher():
                 self.logger.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
             except inotify.calls.InotifyError as iex:
                 self.logger.warning("Caught inotify error (%s). Rebuilding inotify watchers..." % str(iex))
+            except Exception as ex:
+                self.logger.error("Caught unexpected error (%s). Rebuilding inotify watchers..." % str(ex))
 
     def _process_event(self, watch_dir, event):
         self.logger.debug("Processing event")
