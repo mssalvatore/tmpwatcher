@@ -68,6 +68,9 @@ class OWWatcher():
                                   event_path, filename, type_names))
 
                     self._process_event(watch_dir, event)
+            except FileNotFoundError as fnf:
+                msg = "Caught error while adding initial inotify watches on tree [%s]: %s" % (watch_dir, str(fnf))
+                self.logger.warning(msg)
             except inotify.adapters.TerminalEventException as tex:
                 time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is received
                 self.logger.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
