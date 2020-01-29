@@ -60,13 +60,6 @@ class OWWatcher():
                 i = inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
 
                 for event in i.event_gen(yield_nones=False):
-                    (headers, type_names, event_path, filename) = event
-
-                    if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
-                            event_path = event_path[len(SNAP_HOSTFS_PATH_PREFIX):]
-                    self.logger.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
-                                  event_path, filename, type_names))
-
                     self._process_event(watch_dir, event)
             except FileNotFoundError as fnf:
                 msg = "Caught error while adding initial inotify watches on tree [%s]: %s" % (watch_dir, str(fnf))
@@ -81,8 +74,11 @@ class OWWatcher():
 
     def _process_event(self, watch_dir, event):
         self.logger.debug("Processing event")
+
         # '_' variable stands in for "headers", which is not used in this function
         (_, event_types, event_path, filename) = event
+        self._log_received_event_debug_msg(event_path, filename, event_types)
+
         if not self._has_interesting_events(event_types, OWWatcher.INTERESTING_EVENTS):
             self.logger.debug("No relevant event types found")
             return
@@ -94,6 +90,12 @@ class OWWatcher():
         elif self._check_perms_mask(event_path, filename):
             self.logger.info("Found file matching the permissions mask. Sending alert.")
             self._send_perms_mask_alert(watch_dir, event_path, filename)
+
+    def _log_received_event_debug_msg(self, event_path, filename, event_types):
+        if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
+                event_path = event_path[len(SNAP_HOSTFS_PATH_PREFIX):]
+        self.logger.debug("Received event: %s" % "PATH=[{}] FILENAME=[{}] EVENT_TYPES={}".format(
+                      event_path, filename, event_types))
 
     def _has_interesting_events(self, event_types, interesting_events):
         # Converts event_types to a set and takes the intersection of interesting
