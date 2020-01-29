@@ -74,6 +74,8 @@ class OWWatcher():
             except inotify.adapters.TerminalEventException as tex:
                 time.sleep(1) # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is received
                 self.logger.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
+            except inotify.calls.InotifyError as iex:
+                self.logger.warning("Caught inotify error (%s). Rebuilding inotify watchers..." % str(iex))
 
     def _process_event(self, watch_dir, event):
         self.logger.debug("Processing event")
