@@ -195,7 +195,12 @@ A test coverage report can be viewed by pointing your browser at
 
 1. The syslog alerts only show what file or directory was found to be world
    writable. It would simplify the work of the researcher if it could also make
-   an attempt to determine what process created the file.
+   an attempt to determine what process created the file. Consider using
+   fanotify or BPF hooks to accomplish this goal.
+
+1. When using a permissions mask, the syslog alerts just state that the
+   permissions on the file or directory match the mask. It would be useful if
+   the syslog alert reported the permissions of the offending file/directory.
 
 1. Sometimes rsyslog shows the same messages more than once, even though they
    were only sent once. I've yet to determine whether or not this is the fault
