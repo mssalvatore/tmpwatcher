@@ -144,3 +144,43 @@ def test_get_default_config_file_snap(monkeypatch):
 
     expected_config_file = '/var/snap/TESTING/owwatcher.conf'
     assert expected_config_file == options.Options.get_default_config_file(True)
+
+@pytest.fixture
+def config():
+    return {
+            "DEFAULT": {
+                "dirs": "/tmp",
+                "perms_mask": 0o077,
+                "syslog_port": 514,
+                "syslog_server": "127.0.0.1",
+                "protocol": "tcp",
+                "log_file": "/var/log/owwatcher.log",
+                "debug": "False",
+            }
+        }
+
+def test_config_to_tuple(monkeypatch, config):
+    patch_isdir(monkeypatch, config["DEFAULT"]["dirs"])
+    t = options.Options.config_to_tuple(config, False)
+
+    assert t.dirs == config["DEFAULT"]["dirs"]
+    assert t.perms_mask == config["DEFAULT"]["perms_mask"]
+    assert t.syslog_port == config["DEFAULT"]["syslog_port"]
+    assert t.syslog_server == config["DEFAULT"]["syslog_server"]
+    assert t.tcp == True
+    assert t.log_file == config["DEFAULT"]["log_file"]
+    assert t.debug == False
+
+    config["DEFAULT"]["protocol"] = "udp"
+    t = options.Options.config_to_tuple(config, False)
+    assert t.tcp == False
+
+def test_config_to_tuple_invalid_protocol(monkeypatch, config):
+    patch_isdir(monkeypatch, config["DEFAULT"]["dirs"])
+    config["DEFAULT"]["protocol"] = "bogus"
+    t = options.Options.config_to_tuple(config, False)
+
+    with pytest.raises(ValueError) as ve:
+        opt = options.Options(t)
+
+    assert "Unknown protocol 'bogus'. Valid protocols are 'udp' or 'tcp'" in str(ve)

@@ -1,4 +1,5 @@
 import collections
+from distutils import util
 import os
 
 Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp log_file debug')
@@ -141,3 +142,42 @@ class Options:
             return os.path.join(os.getenv('SNAP_DATA'), file_name)
 
         return os.path.join(default_path, file_name)
+
+    @classmethod
+    def config_to_tuple(cls, config, is_snap):
+        try:
+            config_with_defaults = cls._populate_config_with_defaults(config, is_snap)
+
+            return Args(**config_with_defaults)
+        except TypeError as te:
+            raise TypeError("Error reading config file. The config "\
+                    "file may contain an unrecognized option: %s" % str(te))
+
+    @classmethod
+    def _populate_config_with_defaults(cls, config, is_snap):
+        new_config = {}
+        defaults = cls._get_defaults(is_snap)
+
+        for option in defaults._fields:
+            if option not in config["DEFAULT"]:
+                new_config[option] = defaults._asdict()[option]
+            else:
+                new_config[option] = config["DEFAULT"][option]
+
+            if new_config[option] in ['True', 'False']:
+                new_config[option] = bool(util.strtobool(new_config[option]))
+
+        cls._transform_config_protocol(config, new_config)
+
+        return new_config
+
+    @staticmethod
+    def _transform_config_protocol(config, new_config):
+        # NOTE: config["tcp"] has already been populated with the default
+        if "protocol" in config["DEFAULT"]:
+            if config["DEFAULT"]["protocol"] == "tcp":
+                new_config["tcp"] = True
+            elif config["DEFAULT"]["protocol"] == "udp":
+                new_config["tcp"] = False
+            else:
+                new_config["tcp"] = config["DEFAULT"]["protocol"]
