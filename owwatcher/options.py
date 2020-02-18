@@ -129,10 +129,6 @@ class Options:
                 tcp=False, debug=False)
 
     @classmethod
-    def get_default_config_file(cls, is_snap):
-        return cls._get_default_file_path('/etc/', 'owwatcher.conf', is_snap)
-
-    @classmethod
     def _get_default_log_file(cls, is_snap):
         return cls._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
 

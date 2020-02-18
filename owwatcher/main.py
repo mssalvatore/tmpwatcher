@@ -44,13 +44,11 @@ def _octal_int(x):
         return int(x, 8)
 
 def _parse_args(is_snap):
-    default_config_file = Options.get_default_config_file(is_snap)
-
     parser = argparse.ArgumentParser(
             description="Watch a directory for newly created world writable "\
                     "files and directories. Log events to a syslog server.",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--config-path', action='store', default=default_config_file,
+    parser.add_argument('-c', '--config-path', action='store',
                         help='A config file to read settings from. Command line ' \
                               'arguments override values read from the config file. ' \
                               'If the config file does not exist, owwatcher will ' \

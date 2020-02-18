@@ -135,16 +135,6 @@ def test_invalid_debug(monkeypatch, sample_args):
     with pytest.raises(ValueError):
         opt = options.Options(args)
 
-def test_get_default_config_file():
-    expected_config_file = '/etc/owwatcher.conf'
-    assert expected_config_file == options.Options.get_default_config_file(False)
-
-def test_get_default_config_file_snap(monkeypatch):
-    monkeypatch.setenv('SNAP_DATA', '/var/snap/TESTING')
-
-    expected_config_file = '/var/snap/TESTING/owwatcher.conf'
-    assert expected_config_file == options.Options.get_default_config_file(True)
-
 @pytest.fixture
 def config():
     return {
