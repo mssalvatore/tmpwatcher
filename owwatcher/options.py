@@ -11,14 +11,17 @@ class Options:
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
 
+
     def __init__(self, args, config, is_snap=False):
-        self.dirs = Options._merge_dirs_option(args, config, "/tmp")
-        self.perms_mask = Options._merge_perms_mask_option(args, config, None)
-        self.syslog_port = Options._merge_syslog_port_option(args, config, 514)
-        self.syslog_server = Options._merge_syslog_server_option(args, config, "127.0.0.1")
-        self.log_file = Options._merge_log_file_option(args, config, Options._get_default_log_file(is_snap))
-        self.protocol = Options._merge_protocol_option(args, config, "udp")
-        self.debug = Options._merge_debug_option(args, config, False)
+        defaults = Options._get_defaults(is_snap)
+
+        self.dirs = Options._merge_dirs_option(args, config, defaults.dirs)
+        self.perms_mask = Options._merge_perms_mask_option(args, config, defaults.perms_mask)
+        self.syslog_port = Options._merge_syslog_port_option(args, config, defaults.syslog_port)
+        self.syslog_server = Options._merge_syslog_server_option(args, config, defaults.syslog_server)
+        self.log_file = Options._merge_log_file_option(args, config, defaults.log_file)
+        self.protocol = Options._merge_protocol_option(args, config, defaults.tcp)
+        self.debug = Options._merge_debug_option(args, config, defaults.debug)
 
         self._raise_on_invalid_options()
 
@@ -68,7 +71,10 @@ class Options:
         if 'protocol' in config['DEFAULT']:
             return config['DEFAULT']['protocol'].lower()
 
-        return default
+        if default:
+            return "tcp"
+
+        return "udp"
 
     @staticmethod
     def _merge_debug_option(args, config, default):
@@ -117,6 +123,12 @@ class Options:
     def _raise_on_invalid_debug(debug):
         if debug not in ("True", "False"):
             raise ValueError(Options.INVALID_DEBUG_ERROR % debug)
+
+    @classmethod
+    def _get_defaults(cls, is_snap):
+        return Args(dirs="/tmp", perms_mask=None, syslog_server="127.0.0.1",
+                syslog_port=514, log_file=cls._get_default_log_file(is_snap),
+                tcp=False, debug=False)
 
     @staticmethod
     def get_default_config_file(is_snap):
