@@ -149,6 +149,7 @@ class Options:
             raise TypeError("Error reading config file. The config "\
                     "file may contain an unrecognized option: %s" % str(te))
 
+    #TODO: I hate the complexity of this. Do something better.
     @classmethod
     def _populate_config_with_defaults(cls, config, is_snap):
         new_config = {}
