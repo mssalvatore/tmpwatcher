@@ -1,4 +1,7 @@
+import collections
 import os
+
+Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp log_file debug')
 
 class Options:
     INVALID_DIR_ERROR = "The directory '%s' does not exist."
