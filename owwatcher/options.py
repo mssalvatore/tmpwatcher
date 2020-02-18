@@ -130,13 +130,13 @@ class Options:
                 syslog_port=514, log_file=cls._get_default_log_file(is_snap),
                 tcp=False, debug=False)
 
-    @staticmethod
-    def get_default_config_file(is_snap):
-        return Options._get_default_file_path('/etc/', 'owwatcher.conf', is_snap)
+    @classmethod
+    def get_default_config_file(cls, is_snap):
+        return cls._get_default_file_path('/etc/', 'owwatcher.conf', is_snap)
 
-    @staticmethod
-    def _get_default_log_file(is_snap):
-        return Options._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
+    @classmethod
+    def _get_default_log_file(cls, is_snap):
+        return cls._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
 
     @staticmethod
     def _get_default_file_path(default_path, file_name, is_snap):
