@@ -30,6 +30,7 @@ def main():
     except Exception as ex:
         print("Error during initialization: %s" % str(ex), file=sys.stderr)
         sys.exit(1)
+        # TODO: Attempt to log error with some kind of failsafe logger
 
     _LOGGER.info("Starting owwatcher...")
     _log_config_options(options)
