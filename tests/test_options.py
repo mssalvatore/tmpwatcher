@@ -1,9 +1,6 @@
-import collections
 import os
 from owwatcher import options
 import pytest
-
-Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp log_file debug')
 
 def patch_isdir(monkeypatch, is_dir):
     monkeypatch.setattr(os.path, "isdir", lambda _: is_dir)
@@ -11,228 +8,169 @@ def patch_isdir(monkeypatch, is_dir):
 def mock_args_syslog_port(monkeypatch, syslog_port):
     patch_isdir(monkeypatch, True)
 
-    args = Args(dirs="", perms_mask=None, syslog_port=syslog_port, syslog_server = "", tcp=False, log_file=None, debug=False)
-    return args, {"DEFAULT": {}}
+    args = options.Args(dirs="", perms_mask=None, syslog_port=syslog_port, syslog_server = "", tcp=False, log_file=None, debug=False)
+    return args
 
 def test_syslog_port_not_int(monkeypatch):
     with pytest.raises(ValueError):
-        args, config = mock_args_syslog_port(monkeypatch, "iv")
-        options.Options(args, config)
+        args = mock_args_syslog_port(monkeypatch, "iv")
+        options.Options(args)
 
 def test_syslog_port_zero(monkeypatch):
     with pytest.raises(ValueError):
-        args, config = mock_args_syslog_port(monkeypatch, 0)
-        options.Options(args, config)
+        args = mock_args_syslog_port(monkeypatch, 0)
+        options.Options(args)
 
 def test_syslog_port_negative(monkeypatch):
     with pytest.raises(ValueError):
-        args, config = mock_args_syslog_port(monkeypatch, -1)
-        options.Options(args, config)
+        args = mock_args_syslog_port(monkeypatch, -1)
+        options.Options(args)
 
 def test_syslog_port_too_high(monkeypatch):
     with pytest.raises(ValueError):
-        args, config = mock_args_syslog_port(monkeypatch, 65536)
-        options.Options(args, config)
+        args = mock_args_syslog_port(monkeypatch, 65536)
+        options.Options(args)
 
 def mock_args_dir(monkeypatch, is_dir, error=None):
     patch_isdir(monkeypatch, is_dir)
 
     DIR = "/tmp"
-    args = Args(dirs=DIR, perms_mask=None, syslog_port=514, syslog_server = "", tcp=False, log_file=False, debug=False)
+    args = options.Args(dirs=DIR, perms_mask=None, syslog_port=514, syslog_server = "", tcp=False, log_file=False, debug=False)
 
-    return args, {"DEFAULT": {}}
+    return args
 
 def test_dir_no_exist(monkeypatch):
     with pytest.raises(ValueError):
-        args, config = mock_args_dir(monkeypatch, False)
-        options.Options(args, config)
+        args = mock_args_dir(monkeypatch, False)
+        options.Options(args)
+
+@pytest.fixture
+def sample_args():
+    DIR = "/tmp,/home/user/tmp"
+    return options.Args(dirs=DIR, perms_mask=0o077, syslog_port=514,
+                        syslog_server = "127.0.0.1", tcp=False,
+                        log_file="/var/log/owwatcher.log", debug=False)
+
+def test_invalid_perms_mask_large(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs=sample_args.dirs, perms_mask=0o1000,
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp=sample_args.tcp,
+                        log_file=sample_args.log_file, debug=sample_args.debug)
+
+    with pytest.raises(ValueError) as ve:
+        opt = options.Options(args)
+
+    assert "ValueError: 1000 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
+
+def test_invalid_perms_mask_small(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs=sample_args.dirs, perms_mask=-0o1,
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp=sample_args.tcp,
+                        log_file=sample_args.log_file, debug=sample_args.debug)
+
+    with pytest.raises(ValueError) as ve:
+        opt = options.Options(args)
+
+    assert "ValueError: -1 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
+
+def test_invalid_perms_mask_type(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs=sample_args.dirs, perms_mask="bogus",
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp=sample_args.tcp,
+                        log_file=sample_args.log_file, debug=sample_args.debug)
+
+
+    with pytest.raises(TypeError) as te:
+        opt = options.Options(args)
+
+    assert "The permissions mask must be an octal integer" in str(te)
+
+def test_invalid_protocol(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+    
+    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp="bogus",
+                        log_file=sample_args.log_file, debug=sample_args.debug)
+
+    with pytest.raises(ValueError):
+        opt = options.Options(args)
+
+def test_protocol_tcp(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+    
+    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp=True,
+                        log_file=sample_args.log_file, debug=sample_args.debug)
+
+    opt = options.Options(args)
+    assert opt.protocol == "tcp"
+
+def test_protocol_udp(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+    
+    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp=False,
+                        log_file=sample_args.log_file, debug=sample_args.debug)
+
+    opt = options.Options(args)
+    assert opt.protocol == "udp"
+
+def test_invalid_debug(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
+                        syslog_port=sample_args.syslog_port,
+                        syslog_server=sample_args.syslog_server, tcp=sample_args.tcp,
+                        log_file=sample_args.log_file, debug="bogus")
+
+    with pytest.raises(ValueError):
+        opt = options.Options(args)
 
 @pytest.fixture
 def config():
     return {
             "DEFAULT": {
-                "dirs": "/tmp,/home/user/tmp",
+                "dirs": "/tmp",
                 "perms_mask": 0o077,
                 "syslog_port": 514,
                 "syslog_server": "127.0.0.1",
-                "protocol": "udp",
+                "protocol": "tcp",
                 "log_file": "/var/log/owwatcher.log",
                 "debug": "False",
             }
         }
 
-def test_invalid_perms_mask_large(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-    config['DEFAULT']['perms_mask'] = 0o1000
+def test_config_to_tuple(monkeypatch, config):
+    patch_isdir(monkeypatch, config["DEFAULT"]["dirs"])
+    t = options.Options.config_to_tuple(config, False)
 
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
+    assert t.dirs == config["DEFAULT"]["dirs"]
+    assert t.perms_mask == config["DEFAULT"]["perms_mask"]
+    assert t.syslog_port == config["DEFAULT"]["syslog_port"]
+    assert t.syslog_server == config["DEFAULT"]["syslog_server"]
+    assert t.tcp == True
+    assert t.log_file == config["DEFAULT"]["log_file"]
+    assert t.debug == False
+
+    config["DEFAULT"]["protocol"] = "udp"
+    t = options.Options.config_to_tuple(config, False)
+    assert t.tcp == False
+
+def test_config_to_tuple_invalid_protocol(monkeypatch, config):
+    patch_isdir(monkeypatch, config["DEFAULT"]["dirs"])
+    config["DEFAULT"]["protocol"] = "bogus"
+    t = options.Options.config_to_tuple(config, False)
 
     with pytest.raises(ValueError) as ve:
-        opt = options.Options(args, config)
+        opt = options.Options(t)
 
-    assert "ValueError: 1000 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
-
-def test_invalid_perms_mask_small(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-    config['DEFAULT']['perms_mask'] = -0o1
-
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-
-    with pytest.raises(ValueError) as ve:
-        opt = options.Options(args, config)
-
-    assert "ValueError: -1 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
-
-def test_invalid_perms_mask_type(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-    config['DEFAULT']['perms_mask'] = "bogus"
-
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-
-    with pytest.raises(TypeError) as te:
-        opt = options.Options(args, config)
-
-    assert "The permissions mask must be an octal integer" in str(te)
-
-def test_invalid_protocol(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-    config['DEFAULT']['protocol'] = 'bogus'
-
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-
-    with pytest.raises(ValueError):
-        opt = options.Options(args, config)
-
-def test_invalid_debug(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-    config['DEFAULT']['debug'] = 'bogus'
-
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-
-    with pytest.raises(ValueError):
-        opt = options.Options(args, config)
-
-def test_valid_debug(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-
-    config['DEFAULT']['debug'] = 'True'
-    opt = options.Options(args, config)
-
-    config['DEFAULT']['debug'] = 'False'
-    opt = options.Options(args, config)
-
-def test_args_override_perms_mask(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_perms = 0o777
-    args = Args(dirs=None, perms_mask=expected_perms, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == config['DEFAULT']['dirs'].split(',')
-    assert opt.perms_mask == expected_perms
-    assert opt.syslog_port == config['DEFAULT']['syslog_port']
-    assert opt.syslog_server == config['DEFAULT']['syslog_server']
-    assert opt.protocol == config['DEFAULT']['protocol']
-    assert opt.log_file == config['DEFAULT']['log_file']
-    assert opt.debug == False
-
-def test_args_override_dir(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_dir = ["/some/new/dir"]
-    args = Args(dirs=','.join(expected_dir), perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=False)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == expected_dir
-    assert opt.perms_mask == config['DEFAULT']['perms_mask']
-    assert opt.syslog_port == config['DEFAULT']['syslog_port']
-    assert opt.syslog_server == config['DEFAULT']['syslog_server']
-    assert opt.protocol == config['DEFAULT']['protocol']
-    assert opt.log_file == config['DEFAULT']['log_file']
-    assert opt.debug == False
-
-def test_args_override_syslog_port(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_syslog_port = 600
-    args = Args(dirs=None, perms_mask=None, syslog_port=expected_syslog_port, syslog_server=None, tcp=False, log_file=None, debug=False)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == config['DEFAULT']['dirs'].split(',')
-    assert opt.perms_mask == config['DEFAULT']['perms_mask']
-    assert opt.syslog_port == expected_syslog_port
-    assert opt.syslog_server == config['DEFAULT']['syslog_server']
-    assert opt.protocol == config['DEFAULT']['protocol']
-    assert opt.log_file == config['DEFAULT']['log_file']
-    assert opt.debug == False
-
-def test_args_override_syslog_server(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_syslog_server = "otherserver.domain"
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=expected_syslog_server, tcp=False, log_file=None, debug=False)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == config['DEFAULT']['dirs'].split(',')
-    assert opt.perms_mask == config['DEFAULT']['perms_mask']
-    assert opt.syslog_port == config['DEFAULT']['syslog_port']
-    assert opt.syslog_server == expected_syslog_server
-    assert opt.protocol == config['DEFAULT']['protocol']
-    assert opt.log_file == config['DEFAULT']['log_file']
-    assert opt.debug == False
-
-def test_args_override_protocol(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_protocol = 'tcp'
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=True, log_file=None, debug=False)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == config['DEFAULT']['dirs'].split(',')
-    assert opt.perms_mask == config['DEFAULT']['perms_mask']
-    assert opt.syslog_port == config['DEFAULT']['syslog_port']
-    assert opt.syslog_server == config['DEFAULT']['syslog_server']
-    assert opt.protocol == expected_protocol
-    assert opt.log_file == config['DEFAULT']['log_file']
-    assert opt.debug == False
-
-def test_args_override_log_file(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_log_file = '/var/snap/owwatcher/current/owwatcher.log'
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=expected_log_file, debug=False)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == config['DEFAULT']['dirs'].split(',')
-    assert opt.perms_mask == config['DEFAULT']['perms_mask']
-    assert opt.syslog_port == config['DEFAULT']['syslog_port']
-    assert opt.syslog_server == config['DEFAULT']['syslog_server']
-    assert opt.protocol == config['DEFAULT']['protocol']
-    assert opt.log_file == expected_log_file
-    assert opt.debug == False
-
-def test_args_override_debug(monkeypatch, config):
-    patch_isdir(monkeypatch, True)
-
-    expected_debug = True
-    args = Args(dirs=None, perms_mask=None, syslog_port=None, syslog_server=None, tcp=False, log_file=None, debug=True)
-    opt = options.Options(args, config)
-
-    assert opt.dirs == config['DEFAULT']['dirs'].split(',')
-    assert opt.perms_mask == config['DEFAULT']['perms_mask']
-    assert opt.syslog_port == config['DEFAULT']['syslog_port']
-    assert opt.syslog_server == config['DEFAULT']['syslog_server']
-    assert opt.protocol == config['DEFAULT']['protocol']
-    assert opt.log_file == config['DEFAULT']['log_file']
-    assert opt.debug == expected_debug
-
-def test_get_default_config_file():
-    expected_config_file = '/etc/owwatcher.conf'
-    assert expected_config_file == options.Options.get_default_config_file(False)
-
-def test_get_default_config_file_snap(monkeypatch):
-    monkeypatch.setenv('SNAP_DATA', '/var/snap/TESTING')
-
-    expected_config_file = '/var/snap/TESTING/owwatcher.conf'
-    assert expected_config_file == options.Options.get_default_config_file(True)
+    assert "Unknown protocol 'bogus'. Valid protocols are 'udp' or 'tcp'" in str(ve)

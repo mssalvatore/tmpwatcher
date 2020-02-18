@@ -22,8 +22,11 @@ def main():
     try:
         is_snap = check_if_snap()
         (parser, args) = _parse_args(is_snap)
-        config = _read_config(args.config_path)
-        options = Options(args, config, is_snap)
+        if args.config_path:
+            config = _read_config(args.config_path)
+            args = Options.config_to_tuple(config, is_snap)
+
+        options = Options(args, is_snap)
         configure_logging(options.debug, options.syslog_server, options.syslog_port, options.log_file)
         _OWWATCHER = OWWatcher(options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap)
         register_signal_handlers()
@@ -44,17 +47,17 @@ def _octal_int(x):
         return int(x, 8)
 
 def _parse_args(is_snap):
-    default_config_file = Options.get_default_config_file(is_snap)
-
     parser = argparse.ArgumentParser(
             description="Watch a directory for newly created world writable "\
                     "files and directories. Log events to a syslog server.",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--config-path', action='store', default=default_config_file,
+    parser.add_argument('-c', '--config-path', action='store',
                         help='A config file to read settings from. Command line ' \
                               'arguments override values read from the config file. ' \
                               'If the config file does not exist, owwatcher will ' \
-                              'log a warning and ignore the specified config file')
+                              'log a warning and ignore the specified config file. ' \
+                              'NOTE: If a config file is specified, all other ' \
+                              'command-line options will be ignored.')
     parser.add_argument('-d', '--dirs', action='store',
                         help='A comma-separated list of directories to watch ' \
                              'for world writable files/dirs')

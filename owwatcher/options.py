@@ -1,4 +1,8 @@
+import collections
+from distutils import util
 import os
+
+Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp log_file debug')
 
 class Options:
     INVALID_DIR_ERROR = "The directory '%s' does not exist."
@@ -8,24 +12,27 @@ class Options:
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
 
-    def __init__(self, args, config, is_snap=False):
-        self.dirs = Options._merge_dirs_option(args, config, "/tmp")
-        self.perms_mask = Options._merge_perms_mask_option(args, config, None)
-        self.syslog_port = Options._merge_syslog_port_option(args, config, 514)
-        self.syslog_server = Options._merge_syslog_server_option(args, config, "127.0.0.1")
-        self.log_file = Options._merge_log_file_option(args, config, Options._get_default_log_file(is_snap))
-        self.protocol = Options._merge_protocol_option(args, config, "udp")
-        self.debug = Options._merge_debug_option(args, config, False)
+
+    def __init__(self, args, is_snap=False):
+        defaults = Options._get_defaults(is_snap)
+
+        self.dirs = Options._merge_dirs_option(args, defaults.dirs)
+        self.perms_mask = Options._merge_perms_mask_option(args, defaults.perms_mask)
+        self.syslog_port = Options._merge_syslog_port_option(args, defaults.syslog_port)
+        self.syslog_server = Options._merge_syslog_server_option(args, defaults.syslog_server)
+        self.log_file = Options._merge_log_file_option(args, defaults.log_file)
+        self._protocol = Options._merge_protocol_option(args, defaults.tcp)
+        self.debug = Options._merge_debug_option(args, defaults.debug)
 
         self._raise_on_invalid_options()
 
     @staticmethod
-    def _merge_dirs_option(args, config, default):
-        return Options._merge_single_option('dirs', args.dirs, config, default).split(',')
+    def _merge_dirs_option(args, default):
+        return Options._merge_single_option(args.dirs, default).split(',')
 
     @staticmethod
-    def _merge_perms_mask_option(args, config, default):
-        mask = Options._merge_single_option('perms_mask', args.perms_mask, config, default)
+    def _merge_perms_mask_option(args, default):
+        mask = Options._merge_single_option(args.perms_mask, default)
 
         if isinstance(mask, int) or mask is None:
             return mask
@@ -36,45 +43,38 @@ class Options:
             raise TypeError(Options.PERMS_FORMAT_MSG)
 
     @staticmethod
-    def _merge_syslog_port_option(args, config, default):
-        return int(Options._merge_single_option('syslog_port', args.syslog_port, config, default))
+    def _merge_syslog_port_option(args, default):
+        return int(Options._merge_single_option(args.syslog_port, default))
 
     @staticmethod
-    def _merge_syslog_server_option(args, config, default):
-        return Options._merge_single_option('syslog_server', args.syslog_server, config, default)
+    def _merge_syslog_server_option(args, default):
+        return Options._merge_single_option(args.syslog_server, default)
 
     @staticmethod
-    def _merge_log_file_option(args, config, default):
-        return Options._merge_single_option('log_file', args.log_file, config, default)
+    def _merge_log_file_option(args, default):
+        return Options._merge_single_option(args.log_file, default)
 
     @staticmethod
-    def _merge_single_option(option_name, arg, config, default):
+    def _merge_single_option(arg, default):
         if arg is not None:
             return arg
 
-        if option_name in config['DEFAULT']:
-            return config['DEFAULT'][option_name]
-
         return default
 
     @staticmethod
-    def _merge_protocol_option(args, config, default):
+    def _merge_protocol_option(args, default):
         if args.tcp:
-            return "tcp"
+            return args.tcp
 
-        if 'protocol' in config['DEFAULT']:
-            return config['DEFAULT']['protocol'].lower()
+        if default:
+            return default
 
-        return default
+        return False
 
     @staticmethod
-    def _merge_debug_option(args, config, default):
+    def _merge_debug_option(args, default):
         if args.debug:
-            return True
-
-        if 'debug' in config['DEFAULT']:
-            Options._raise_on_invalid_debug(config['DEFAULT']['debug'])
-            return True if config['DEFAULT']['debug'] == 'True' else False
+            return args.debug
 
         return default
 
@@ -83,6 +83,7 @@ class Options:
         self._raise_on_invalid_syslog_port()
         self._raise_on_invalid_protocol()
         self._raise_on_invalid_dir()
+        self._raise_on_invalid_debug()
 
     def _raise_on_invalid_perms_mask(self):
         if self.perms_mask is None:
@@ -102,26 +103,34 @@ class Options:
             raise ValueError(Options.INVALID_PORT_ERROR)
 
     def _raise_on_invalid_dir(self):
-        for dir in self.dirs:
-            if not os.path.isdir(dir):
-                raise ValueError(Options.INVALID_DIR_ERROR % dir)
+        for d in self.dirs:
+            if not os.path.isdir(d):
+                raise ValueError(Options.INVALID_DIR_ERROR % d)
 
     def _raise_on_invalid_protocol(self):
-        if self.protocol not in ('tcp', 'udp'):
-            raise ValueError(Options.INVALID_PROTOCOL_ERROR % self.protocol)
+        if not isinstance(self._protocol, bool):
+            raise ValueError(Options.INVALID_PROTOCOL_ERROR % self._protocol)
 
-    @staticmethod
-    def _raise_on_invalid_debug(debug):
-        if debug not in ("True", "False"):
-            raise ValueError(Options.INVALID_DEBUG_ERROR % debug)
+    @property
+    def protocol(self):
+        if self._protocol:
+            return "tcp"
 
-    @staticmethod
-    def get_default_config_file(is_snap):
-        return Options._get_default_file_path('/etc/', 'owwatcher.conf', is_snap)
+        return "udp"
 
-    @staticmethod
-    def _get_default_log_file(is_snap):
-        return Options._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
+    def _raise_on_invalid_debug(self):
+        if not isinstance(self.debug, bool):
+            raise ValueError(Options.INVALID_DEBUG_ERROR % self.debug)
+
+    @classmethod
+    def _get_defaults(cls, is_snap):
+        return Args(dirs="/tmp", perms_mask=None, syslog_server="127.0.0.1",
+                syslog_port=514, log_file=cls._get_default_log_file(is_snap),
+                tcp=False, debug=False)
+
+    @classmethod
+    def _get_default_log_file(cls, is_snap):
+        return cls._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
 
     @staticmethod
     def _get_default_file_path(default_path, file_name, is_snap):
@@ -129,3 +138,43 @@ class Options:
             return os.path.join(os.getenv('SNAP_DATA'), file_name)
 
         return os.path.join(default_path, file_name)
+
+    @classmethod
+    def config_to_tuple(cls, config, is_snap):
+        try:
+            config_with_defaults = cls._populate_config_with_defaults(config, is_snap)
+
+            return Args(**config_with_defaults)
+        except TypeError as te:
+            raise TypeError("Error reading config file. The config "\
+                    "file may contain an unrecognized option: %s" % str(te))
+
+    #TODO: I hate the complexity of this. Do something better.
+    @classmethod
+    def _populate_config_with_defaults(cls, config, is_snap):
+        new_config = {}
+        defaults = cls._get_defaults(is_snap)
+
+        for option in defaults._fields:
+            if option not in config["DEFAULT"]:
+                new_config[option] = defaults._asdict()[option]
+            else:
+                new_config[option] = config["DEFAULT"][option]
+
+            if new_config[option] in ['True', 'False']:
+                new_config[option] = bool(util.strtobool(new_config[option]))
+
+        cls._transform_config_protocol(config, new_config)
+
+        return new_config
+
+    @staticmethod
+    def _transform_config_protocol(config, new_config):
+        # NOTE: config["tcp"] has already been populated with the default
+        if "protocol" in config["DEFAULT"]:
+            if config["DEFAULT"]["protocol"] == "tcp":
+                new_config["tcp"] = True
+            elif config["DEFAULT"]["protocol"] == "udp":
+                new_config["tcp"] = False
+            else:
+                new_config["tcp"] = config["DEFAULT"]["protocol"]
