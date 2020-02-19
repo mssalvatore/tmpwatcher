@@ -4,14 +4,14 @@ import socket
 
 # This factory class creates and configures owwatcher's loggers
 class OWWatcherLoggerConfigurer:
-    def __init__(self, debug, syslog_server, syslog_port, log_file):
+    def __init__(self, options):
         self.owwatcher_logger = None
         self.syslog_logger = None
 
-        self._configure_root_logger(debug)
-        self._configure_inotify_logger(log_file)
-        self._configure_owwatcher_logger(log_file)
-        self._configure_syslog_logger(syslog_server, syslog_port)
+        self._configure_root_logger(options.debug)
+        self._configure_inotify_logger(options.log_file)
+        self._configure_owwatcher_logger(options.log_file)
+        self._configure_syslog_logger(options.syslog_server, options.syslog_port)
 
     def __del__(self):
         root_logger = logging.getLogger()
