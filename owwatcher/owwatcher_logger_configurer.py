@@ -67,6 +67,10 @@ class OWWatcherLoggerConfigurer:
             return True
 
     def _configure_syslog_logger(self, syslog_server, syslog_port, protocol):
+        if syslog_server is None or syslog_port is None:
+            self.syslog_logger = OWWatcherLoggerConfigurer.get_null_logger()
+            return
+
         # The syslog logger must not be a child of the self.owwatcher_logger,
         # otherwise some log messages may be duplicated as self.syslog_logger
         # will inherit self.owwatcher_logger's handlers

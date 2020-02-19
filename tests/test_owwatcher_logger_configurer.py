@@ -24,20 +24,23 @@ def owlc_full(monkeypatch, debug):
 
 @pytest.fixture
 def owlc_tcp(monkeypatch):
-    class mock_socket:
-        def connect(*args, **kwargs):
-            pass
-
     mock_hostname(monkeypatch)
+    mock_socket_connect(monkeypatch)
     options = Mock_Options(syslog_port=1337, syslog_server="localhost",
             protocol="tcp", log_file="/dev/null", stdout=None, debug=False,
             dirs=None, perms_mask=None)
 
-    monkeypatch.setattr(socket, "socket", lambda *args: mock_socket())
     return owlc.OWWatcherLoggerConfigurer(options)
 
 def mock_hostname(monkeypatch):
     monkeypatch.setattr(socket, "gethostname", lambda: "testhost")
+
+def mock_socket_connect(monkeypatch):
+    class mock_socket:
+        def connect(*args, **kwargs):
+            pass
+
+    monkeypatch.setattr(socket, "socket", lambda *args: mock_socket())
 
 def test_owwatcher_logger_level_debug(owlc_full_debug):
     l = owlc_full_debug.get_owwatcher_logger()
@@ -86,3 +89,15 @@ def test_syslog_logger_invalid_protocol(monkeypatch):
         owlc.OWWatcherLoggerConfigurer(options)
 
     assert "Unexpected protocol 'icmp'. Valid protocols are 'tcp' or 'udp'." in str(ve)
+
+def test_syslog_logger_null(monkeypatch):
+    mock_hostname(monkeypatch)
+    options = Mock_Options(syslog_port=None, syslog_server=None,
+            protocol="tcp", log_file="/dev/null", stdout=None, debug=False,
+            dirs=None, perms_mask=None)
+
+    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
+    l = owlc_null_syslog.get_syslog_logger()
+
+    assert len(l.handlers) == 1
+    assert isinstance(l.handlers[0], logging.NullHandler)
