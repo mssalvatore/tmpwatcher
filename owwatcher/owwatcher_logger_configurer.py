@@ -13,6 +13,20 @@ class OWWatcherLoggerConfigurer:
         self._configure_owwatcher_logger(log_file)
         self._configure_syslog_logger(syslog_server, syslog_port)
 
+    def __del__(self):
+        root_logger = logging.getLogger()
+        inotify_logger = logging.getLogger('inotify')
+
+        OWWatcherLoggerConfigurer._clean_logger(root_logger)
+        OWWatcherLoggerConfigurer._clean_logger(inotify_logger)
+        OWWatcherLoggerConfigurer._clean_logger(self.owwatcher_logger)
+        OWWatcherLoggerConfigurer._clean_logger(self.syslog_logger)
+
+    @staticmethod
+    def _clean_logger(logger):
+        list(map(logger.removeHandler, logger.handlers[:]))
+        list(map(logger.removeFilter, logger.filters[:]))
+
     def _configure_root_logger(self, debug):
         root_logger = logging.getLogger()
 
