@@ -9,8 +9,8 @@ class OWWatcherLoggerConfigurer:
         self.syslog_logger = None
 
         self._configure_root_logger(options.debug)
-        self._configure_inotify_logger(options.log_file)
-        self._configure_owwatcher_logger(options.log_file)
+        self._configure_inotify_logger(options.log_file, options.stdout)
+        self._configure_owwatcher_logger(options.log_file, options.stdout)
         self._configure_syslog_logger(options.syslog_server, options.syslog_port, options.protocol)
 
     def __del__(self):
@@ -37,25 +37,30 @@ class OWWatcherLoggerConfigurer:
         log_level = logging.DEBUG if debug else logging.INFO
         root_logger.setLevel(log_level)
 
-    def _configure_inotify_logger(self, log_file):
+    def _configure_inotify_logger(self, log_file, log_to_stdout):
+        inotify_logger = logging.getLogger('inotify')
         log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-        inotify_logger = logging.getLogger('inotify')
-        self._configure_file_handler(inotify_logger, log_formatter, log_file)
+        self._configure_local_logger(inotify_logger, log_formatter, log_file, log_to_stdout)
 
-    def _configure_owwatcher_logger(self, log_file):
+    def _configure_owwatcher_logger(self, log_file, log_to_stdout):
         self.owwatcher_logger = logging.getLogger('owwatcher.%s' % __name__)
         log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
 
-        self._configure_file_handler(self.owwatcher_logger, log_formatter, log_file)
+        self._configure_local_logger(self.owwatcher_logger, log_formatter, log_file, log_to_stdout)
+
+    def _configure_local_logger(self, logger, log_formatter, log_file, log_to_stdout):
+        if log_file:
+            self._configure_file_handler(logger, log_formatter, log_file)
+
+        if not log_file or log_to_stdout:
+            self._configure_stream_handler(logger, log_formatter)
 
     def _configure_file_handler(self, logger, log_formatter, log_file):
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(log_formatter)
         logger.addHandler(file_handler)
 
-    # Used for logging to stdout
-    # Currently dead code but will likely be used in the future
     def _configure_stream_handler(self, logger, log_formatter):
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(log_formatter)

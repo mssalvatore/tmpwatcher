@@ -91,7 +91,6 @@ def test_syslog_logger_invalid_protocol(monkeypatch):
     assert "Unexpected protocol 'icmp'. Valid protocols are 'tcp' or 'udp'." in str(ve)
 
 def test_syslog_logger_null(monkeypatch):
-    mock_hostname(monkeypatch)
     options = Mock_Options(syslog_port=None, syslog_server=None,
             protocol="tcp", log_file="/dev/null", stdout=None, debug=False,
             dirs=None, perms_mask=None)
@@ -101,3 +100,48 @@ def test_syslog_logger_null(monkeypatch):
 
     assert len(l.handlers) == 1
     assert isinstance(l.handlers[0], logging.NullHandler)
+
+def test_owwatcher_file_and_stdout(monkeypatch):
+    options = Mock_Options(syslog_port=None, syslog_server=None,
+            protocol="tcp", log_file="/dev/null", stdout=True, debug=False,
+            dirs=None, perms_mask=None)
+
+    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
+    l = owlc_null_syslog.get_owwatcher_logger()
+
+    assert len(l.handlers) == 2
+    assert isinstance(l.handlers[0], logging.FileHandler)
+    assert isinstance(l.handlers[1], logging.StreamHandler)
+
+def test_owwatcher_stdout_only(monkeypatch):
+    options = Mock_Options(syslog_port=None, syslog_server=None,
+            protocol="tcp", log_file=None, stdout=True, debug=False,
+            dirs=None, perms_mask=None)
+
+    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
+    l = owlc_null_syslog.get_owwatcher_logger()
+
+    assert len(l.handlers) == 1
+    assert isinstance(l.handlers[0], logging.StreamHandler)
+
+def test_owwatcher_stdout_only_by_default(monkeypatch):
+    options = Mock_Options(syslog_port=None, syslog_server=None,
+            protocol="tcp", log_file=None, stdout=False, debug=False,
+            dirs=None, perms_mask=None)
+
+    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
+    l = owlc_null_syslog.get_owwatcher_logger()
+
+    assert len(l.handlers) == 1
+    assert isinstance(l.handlers[0], logging.StreamHandler)
+
+def test_owwatcher_file_only(monkeypatch):
+    options = Mock_Options(syslog_port=None, syslog_server=None,
+            protocol="tcp", log_file="/dev/null", stdout=False, debug=False,
+            dirs=None, perms_mask=None)
+
+    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
+    l = owlc_null_syslog.get_owwatcher_logger()
+
+    assert len(l.handlers) == 1
+    assert isinstance(l.handlers[0], logging.FileHandler)
