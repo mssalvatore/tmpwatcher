@@ -12,6 +12,8 @@ class Options:
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     INVALID_STDOUT_ERROR = "'%s' is not a valid value for the stdout option. Valid values are 'True' or 'False'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
+    PORT_WITHOUT_SERVER = "Cannot specify a syslog port without a syslog server."
+    SERVER_WITHOUT_PORT = "Cannot specify a syslog server without a syslog port."
 
 
     def __init__(self, args, is_snap=False):
@@ -19,8 +21,8 @@ class Options:
 
         self.dirs = (args.dirs if args.dirs is not None else defaults.dirs).split(',')
         self.perms_mask = Options._perms_mask_args_or_default(args, defaults.perms_mask)
-        self.syslog_port = int(args.syslog_port) if args.syslog_port is not None else defaults.syslog_port
-        self.syslog_server = args.syslog_server if args.syslog_server is not None else defaults.syslog_server
+        self.syslog_port = int(args.syslog_port) if args.syslog_port not in [None, ""] else defaults.syslog_port
+        self.syslog_server = args.syslog_server if args.syslog_server not in [None, ""] else defaults.syslog_server
         self.log_file = args.log_file if args.log_file is not None else defaults.log_file
         self._protocol = Options._protocol_args_or_default(args, defaults.tcp)
         self.stdout = args.stdout if args.stdout else defaults.stdout
@@ -53,6 +55,7 @@ class Options:
     def _raise_on_invalid_options(self):
         self._raise_on_invalid_perms_mask()
         self._raise_on_invalid_syslog_port()
+        self._raise_on_invalid_syslog_server()
         self._raise_on_invalid_protocol()
         self._raise_on_invalid_dir()
         self._raise_on_invalid_stdout()
@@ -69,11 +72,24 @@ class Options:
                 raise ValueError(Options.INVALID_PERMS_ERROR % format(self.perms_mask, 'o'))
 
     def _raise_on_invalid_syslog_port(self):
+        if self.syslog_port is None:
+            if self.syslog_server is None:
+                return
+            else:
+                raise ValueError(Options.PORT_WITHOUT_SERVER)
+
         if not isinstance(self.syslog_port, int):
             raise TypeError(Options.INVALID_PORT_ERROR)
 
         if self.syslog_port < 1 or self.syslog_port > 65535:
             raise ValueError(Options.INVALID_PORT_ERROR)
+
+    def _raise_on_invalid_syslog_server(self):
+        if self.syslog_server is None :
+            if self.syslog_port is None:
+                return
+            else:
+                raise ValueError(Options.SERVER_WITHOUT_PORT)
 
     def _raise_on_invalid_dir(self):
         for d in self.dirs:
@@ -103,8 +119,8 @@ class Options:
 
     @classmethod
     def _get_defaults(cls, is_snap):
-        return Args(dirs="/tmp", perms_mask=None, syslog_server="127.0.0.1",
-                syslog_port=514, tcp=False, stdout=False,
+        return Args(dirs="/tmp", perms_mask=None, syslog_server=None,
+                syslog_port=None, tcp=False, stdout=False,
                 log_file=cls._get_default_log_file(is_snap), debug=False)
 
     @classmethod

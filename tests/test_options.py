@@ -9,7 +9,7 @@ def mock_args_syslog_port(monkeypatch, syslog_port):
     patch_isdir(monkeypatch, True)
 
     args = options.Args(dirs="", perms_mask=None, syslog_port=syslog_port,
-            syslog_server="", tcp=False, stdout=False, log_file=None, debug=False)
+            syslog_server="localhost", tcp=False, stdout=False, log_file=None, debug=False)
     return args
 
 def test_syslog_port_not_int(monkeypatch):
@@ -31,6 +31,42 @@ def test_syslog_port_too_high(monkeypatch):
     with pytest.raises(ValueError):
         args = mock_args_syslog_port(monkeypatch, 65536)
         options.Options(args)
+
+def test_syslog_port_is_none(monkeypatch):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs="", perms_mask=None, syslog_port=None,
+            syslog_server="", tcp=False, stdout=False, log_file=None, debug=False)
+
+    o = options.Options(args)
+    assert o.syslog_port is None
+
+def test_syslog_port_is_none_server_defined(monkeypatch):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs="", perms_mask=None, syslog_port=None,
+            syslog_server="localhost", tcp=False, stdout=False, log_file=None, debug=False)
+
+    with pytest.raises(ValueError):
+        o = options.Options(args)
+
+def test_syslog_server_is_none(monkeypatch):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs="", perms_mask=None, syslog_port=None,
+            syslog_server=None, tcp=False, stdout=False, log_file=None, debug=False)
+
+    o = options.Options(args)
+    assert o.syslog_server is None
+
+def test_syslog_server_is_none_port_defined(monkeypatch):
+    patch_isdir(monkeypatch, True)
+
+    args = options.Args(dirs="", perms_mask=None, syslog_port=1337,
+            syslog_server=None, tcp=False, stdout=False, log_file=None, debug=False)
+
+    with pytest.raises(ValueError):
+        o = options.Options(args)
 
 def mock_args_dir(monkeypatch, is_dir, error=None):
     patch_isdir(monkeypatch, is_dir)
