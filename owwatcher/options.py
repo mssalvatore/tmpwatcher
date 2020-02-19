@@ -16,23 +16,19 @@ class Options:
     def __init__(self, args, is_snap=False):
         defaults = Options._get_defaults(is_snap)
 
-        self.dirs = Options._merge_dirs_option(args, defaults.dirs)
-        self.perms_mask = Options._merge_perms_mask_option(args, defaults.perms_mask)
-        self.syslog_port = Options._merge_syslog_port_option(args, defaults.syslog_port)
-        self.syslog_server = Options._merge_syslog_server_option(args, defaults.syslog_server)
-        self.log_file = Options._merge_log_file_option(args, defaults.log_file)
-        self._protocol = Options._merge_protocol_option(args, defaults.tcp)
-        self.debug = Options._merge_debug_option(args, defaults.debug)
+        self.dirs = (args.dirs if args.dirs is not None else defaults.dirs).split(',')
+        self.perms_mask = Options._perms_mask_args_or_default(args, defaults.perms_mask)
+        self.syslog_port = int(args.syslog_port) if args.syslog_port is not None else defaults.syslog_port
+        self.syslog_server = args.syslog_server if args.syslog_server is not None else defaults.syslog_server
+        self.log_file = args.log_file if args.log_file is not None else defaults.log_file
+        self._protocol = Options._protocol_args_or_default(args, defaults.tcp)
+        self.debug = args.debug if args.debug else defaults.debug
 
         self._raise_on_invalid_options()
 
     @staticmethod
-    def _merge_dirs_option(args, default):
-        return Options._merge_single_option(args.dirs, default).split(',')
-
-    @staticmethod
-    def _merge_perms_mask_option(args, default):
-        mask = Options._merge_single_option(args.perms_mask, default)
+    def _perms_mask_args_or_default(args, default):
+        mask = args.perms_mask if args.perms_mask is not None else default
 
         if isinstance(mask, int) or mask is None:
             return mask
@@ -43,26 +39,7 @@ class Options:
             raise TypeError(Options.PERMS_FORMAT_MSG)
 
     @staticmethod
-    def _merge_syslog_port_option(args, default):
-        return int(Options._merge_single_option(args.syslog_port, default))
-
-    @staticmethod
-    def _merge_syslog_server_option(args, default):
-        return Options._merge_single_option(args.syslog_server, default)
-
-    @staticmethod
-    def _merge_log_file_option(args, default):
-        return Options._merge_single_option(args.log_file, default)
-
-    @staticmethod
-    def _merge_single_option(arg, default):
-        if arg is not None:
-            return arg
-
-        return default
-
-    @staticmethod
-    def _merge_protocol_option(args, default):
+    def _protocol_args_or_default(args, default):
         if args.tcp:
             return args.tcp
 
@@ -70,13 +47,6 @@ class Options:
             return default
 
         return False
-
-    @staticmethod
-    def _merge_debug_option(args, default):
-        if args.debug:
-            return args.debug
-
-        return default
 
     def _raise_on_invalid_options(self):
         self._raise_on_invalid_perms_mask()
@@ -111,16 +81,16 @@ class Options:
         if not isinstance(self._protocol, bool):
             raise ValueError(Options.INVALID_PROTOCOL_ERROR % self._protocol)
 
+    def _raise_on_invalid_debug(self):
+        if not isinstance(self.debug, bool):
+            raise ValueError(Options.INVALID_DEBUG_ERROR % self.debug)
+
     @property
     def protocol(self):
         if self._protocol:
             return "tcp"
 
         return "udp"
-
-    def _raise_on_invalid_debug(self):
-        if not isinstance(self.debug, bool):
-            raise ValueError(Options.INVALID_DEBUG_ERROR % self.debug)
 
     @classmethod
     def _get_defaults(cls, is_snap):
