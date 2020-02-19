@@ -11,7 +11,7 @@ class OWWatcherLoggerConfigurer:
         self._configure_root_logger(options.debug)
         self._configure_inotify_logger(options.log_file)
         self._configure_owwatcher_logger(options.log_file)
-        self._configure_syslog_logger(options.syslog_server, options.syslog_port)
+        self._configure_syslog_logger(options.syslog_server, options.syslog_port, options.protocol)
 
     def __del__(self):
         root_logger = logging.getLogger()
@@ -26,7 +26,6 @@ class OWWatcherLoggerConfigurer:
     def _clean_logger(logger):
         list(map(logger.removeHandler, logger.handlers[:]))
         list(map(logger.removeFilter, logger.filters[:]))
-
     def _configure_root_logger(self, debug):
         root_logger = logging.getLogger()
 
@@ -65,17 +64,30 @@ class OWWatcherLoggerConfigurer:
             record.hostname = self.hostname
             return True
 
-    def _configure_syslog_logger(self, syslog_server, syslog_port):
+    def _configure_syslog_logger(self, syslog_server, syslog_port, protocol):
         # The syslog logger must not be a child of the self.owwatcher_logger,
         # otherwise some log messages may be duplicated as self.syslog_logger
         # will inherit self.owwatcher_logger's handlers
         self.syslog_logger = logging.getLogger('owwatcher.syslog')
         log_formatter = logging.Formatter("%(hostname)s - %(module)s - %(levelname)s - %(message)s")
 
-        syslog_handler = logging.handlers.SysLogHandler(address=(syslog_server, syslog_port), socktype=socket.SOCK_DGRAM)
+        socket_type = OWWatcherLoggerConfigurer._get_socket_type_from_protocol_name(protocol)
+        syslog_handler = logging.handlers.SysLogHandler(
+                address=(syslog_server, syslog_port), socktype=socket_type)
+
         syslog_handler.setFormatter(log_formatter)
         self.syslog_logger.addFilter(self._ContextFilter())
         self.syslog_logger.addHandler(syslog_handler)
+
+    @staticmethod
+    def _get_socket_type_from_protocol_name(protocol):
+        if protocol == "tcp":
+            return socket.SOCK_STREAM
+        elif protocol == "udp":
+            return socket.SOCK_DGRAM
+        else:
+            raise ValueError("Unexpected protocol '%s'. Valid protocols are " \
+                    "'tcp' or 'udp'." % protocol)
 
     def get_owwatcher_logger(self):
         return self.owwatcher_logger
