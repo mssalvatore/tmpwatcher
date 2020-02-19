@@ -26,6 +26,9 @@ class OWWatcherLoggerConfigurer:
 
     @staticmethod
     def _clean_logger(logger):
+        if logger is None:
+            return
+
         list(map(logger.removeHandler, logger.handlers[:]))
         list(map(logger.removeFilter, logger.filters[:]))
     def _configure_root_logger(self, debug):
