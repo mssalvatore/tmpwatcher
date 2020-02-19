@@ -16,8 +16,10 @@ class OWWatcherLoggerConfigurer:
     def __del__(self):
         root_logger = logging.getLogger()
         inotify_logger = logging.getLogger('inotify')
+        null_logger = OWWatcherLoggerConfigurer.get_null_logger()
 
         OWWatcherLoggerConfigurer._clean_logger(root_logger)
+        OWWatcherLoggerConfigurer._clean_logger(null_logger)
         OWWatcherLoggerConfigurer._clean_logger(inotify_logger)
         OWWatcherLoggerConfigurer._clean_logger(self.owwatcher_logger)
         OWWatcherLoggerConfigurer._clean_logger(self.syslog_logger)
@@ -98,7 +100,8 @@ class OWWatcherLoggerConfigurer:
     @staticmethod
     def get_null_logger():
         null_logger = logging.getLogger('owwatcher.null')
-        null_logger.addHandler(logging.NullHandler())
+        if len(null_logger.handlers) < 1:
+            null_logger.addHandler(logging.NullHandler())
 
         return null_logger
 
