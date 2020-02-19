@@ -71,6 +71,11 @@ def _parse_args(is_snap):
                         help='IP address or hostname of a syslog server')
     parser.add_argument('-t', '--tcp', action='store_true',
                         help='Use TCP instead of UDP to send syslog messages.')
+    parser.add_argument('--stdout', action='store_true',
+                        help='Send output to stdout. This is the default behavior' \
+                             'if a log file is not specified. If a log file is ' \
+                             'specified, OWWatcher will not send output to stdout' \
+                             'unless this flag is set.')
     parser.add_argument('-l', '--log-file', action='store',
                         help='Path to log file')
     parser.add_argument('--debug', action='store_true',
