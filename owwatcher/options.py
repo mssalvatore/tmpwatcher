@@ -2,7 +2,8 @@ import collections
 from distutils import util
 import os
 
-Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp stdout log_file debug')
+Args = collections.namedtuple('Args', 'dirs recursive perms_mask syslog_port '\
+                                      'syslog_server tcp stdout log_file debug')
 
 class Options:
     INVALID_DIR_ERROR = "The directory '%s' does not exist."
@@ -25,6 +26,7 @@ class Options:
         self.syslog_server = args.syslog_server if args.syslog_server not in [None, ""] else defaults.syslog_server
         self.log_file = args.log_file if args.log_file is not None else defaults.log_file
         self._protocol = Options._protocol_args_or_default(args, defaults.tcp)
+        self.recursive = args.recursive if args.recursive else defaults.recursive
         self.stdout = args.stdout if args.stdout else defaults.stdout
         self.debug = args.debug if args.debug else defaults.debug
 
@@ -58,6 +60,7 @@ class Options:
         self._raise_on_invalid_syslog_server()
         self._raise_on_invalid_protocol()
         self._raise_on_invalid_dir()
+        self._raise_on_invalid_recursive()
         self._raise_on_invalid_stdout()
         self._raise_on_invalid_debug()
 
@@ -99,6 +102,9 @@ class Options:
     def _raise_on_invalid_protocol(self):
         Options._raise_on_invalid_bool(self._protocol, Options.INVALID_PROTOCOL_ERROR)
 
+    def _raise_on_invalid_recursive(self):
+        Options._raise_on_invalid_bool(self.recursive, Options.INVALID_STDOUT_ERROR)
+
     def _raise_on_invalid_stdout(self):
         Options._raise_on_invalid_bool(self.stdout, Options.INVALID_STDOUT_ERROR)
 
@@ -119,7 +125,7 @@ class Options:
 
     @classmethod
     def _get_defaults(cls, is_snap):
-        return Args(dirs="/tmp", perms_mask=None, syslog_server=None,
+        return Args(dirs="/tmp", recursive=False, perms_mask=None, syslog_server=None,
                 syslog_port=None, tcp=False, stdout=False,
                 log_file=None, debug=False)
 

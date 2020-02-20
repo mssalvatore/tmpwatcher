@@ -8,7 +8,7 @@ def patch_isdir(monkeypatch, is_dir):
 def mock_args_syslog_port(monkeypatch, syslog_port):
     patch_isdir(monkeypatch, True)
 
-    args = options.Args(dirs="", perms_mask=None, syslog_port=syslog_port,
+    args = options.Args(dirs="", recursive=False, perms_mask=None, syslog_port=syslog_port,
             syslog_server="localhost", tcp=False, stdout=False, log_file=None, debug=False)
     return args
 
@@ -34,7 +34,7 @@ def test_syslog_port_too_high(monkeypatch):
 
 def get_args_dict(monkeypatch, key=None, value=None):
     patch_isdir(monkeypatch, True)
-    ad =  {"dirs": "", "perms_mask": None, "syslog_port": 514,
+    ad =  {"dirs": "", "perms_mask": None, "recursive": False, "syslog_port": 514,
            "syslog_server": "localhost", "tcp": False, "stdout": False, "log_file": None,
            "debug": False}
 
@@ -77,7 +77,7 @@ def mock_args_dir(monkeypatch, is_dir, error=None):
     patch_isdir(monkeypatch, is_dir)
 
     DIR = "/tmp"
-    args = options.Args(dirs=DIR, perms_mask=None, syslog_port=514,
+    args = options.Args(dirs=DIR, recursive=False, perms_mask=None, syslog_port=514,
             syslog_server = "", tcp=False, stdout=False, log_file=False, debug=False)
 
     return args
@@ -92,7 +92,7 @@ def sample_args(monkeypatch):
     patch_isdir(monkeypatch, True)
     DIR = "/tmp,/home/user/tmp"
 
-    return {"dirs": DIR, "perms_mask": 0o077, "syslog_port": 514,
+    return {"dirs": DIR, "recursive": False, "perms_mask": 0o077, "syslog_port": 514,
             "syslog_server": "127.0.0.1", "tcp": False, "stdout": False,
             "log_file": "/var/log/owwatcher.log", "debug": False}
 
@@ -152,6 +152,13 @@ def test_protocol_udp(sample_args):
     opt = options.Options(args)
     assert opt.protocol == "udp"
 
+def test_invalid_recursive(sample_args):
+    sample_args['recursive'] = "bogus"
+    args = options.Args(**sample_args)
+
+    with pytest.raises(ValueError):
+        opt = options.Options(args)
+
 def test_invalid_stdout(sample_args):
     sample_args['stdout'] = "bogus"
     args = options.Args(**sample_args)
@@ -171,6 +178,7 @@ def config():
     return {
             "DEFAULT": {
                 "dirs": "/tmp",
+                "recursive": "True",
                 "perms_mask": 0o077,
                 "syslog_port": 514,
                 "syslog_server": "127.0.0.1",
@@ -186,6 +194,7 @@ def test_config_to_tuple(monkeypatch, config):
     t = options.Options.config_to_tuple(config, False)
 
     assert t.dirs == config["DEFAULT"]["dirs"]
+    assert t.recursive == True
     assert t.perms_mask == config["DEFAULT"]["perms_mask"]
     assert t.syslog_port == config["DEFAULT"]["syslog_port"]
     assert t.syslog_server == config["DEFAULT"]["syslog_server"]
