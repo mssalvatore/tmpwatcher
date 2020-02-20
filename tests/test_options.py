@@ -32,38 +32,43 @@ def test_syslog_port_too_high(monkeypatch):
         args = mock_args_syslog_port(monkeypatch, 65536)
         options.Options(args)
 
-def test_syslog_port_is_none(monkeypatch):
+def get_args_dict(monkeypatch, key=None, value=None):
     patch_isdir(monkeypatch, True)
+    ad =  {"dirs": "", "perms_mask": None, "syslog_port": 514,
+           "syslog_server": "localhost", "tcp": False, "stdout": False, "log_file": None,
+           "debug": False}
 
-    args = options.Args(dirs="", perms_mask=None, syslog_port=None,
-            syslog_server="", tcp=False, stdout=False, log_file=None, debug=False)
+    if key is not None:
+        ad[key] = value
+
+    return ad
+
+def test_syslog_server_port_both_none(monkeypatch):
+    args_dict = get_args_dict(monkeypatch, 'syslog_server', None)
+    args_dict['syslog_port'] = None
+    args = options.Args(**args_dict)
 
     o = options.Options(args)
+    assert o.syslog_server is None
     assert o.syslog_port is None
 
 def test_syslog_port_is_none_server_defined(monkeypatch):
-    patch_isdir(monkeypatch, True)
-
-    args = options.Args(dirs="", perms_mask=None, syslog_port=None,
-            syslog_server="localhost", tcp=False, stdout=False, log_file=None, debug=False)
+    args_dict = get_args_dict(monkeypatch, 'syslog_port', None)
+    args = options.Args(**args_dict)
 
     with pytest.raises(ValueError):
         o = options.Options(args)
 
-def test_syslog_server_is_none(monkeypatch):
-    patch_isdir(monkeypatch, True)
-
-    args = options.Args(dirs="", perms_mask=None, syslog_port=None,
-            syslog_server=None, tcp=False, stdout=False, log_file=None, debug=False)
-
-    o = options.Options(args)
-    assert o.syslog_server is None
-
 def test_syslog_server_is_none_port_defined(monkeypatch):
-    patch_isdir(monkeypatch, True)
+    args_dict = get_args_dict(monkeypatch, 'syslog_server', None)
+    args = options.Args(**args_dict)
 
-    args = options.Args(dirs="", perms_mask=None, syslog_port=1337,
-            syslog_server=None, tcp=False, stdout=False, log_file=None, debug=False)
+    with pytest.raises(ValueError):
+        o = options.Options(args)
+
+def test_syslog_server_is_empty_port_defined(monkeypatch):
+    args_dict = get_args_dict(monkeypatch, 'syslog_server', "")
+    args = options.Args(**args_dict)
 
     with pytest.raises(ValueError):
         o = options.Options(args)
@@ -87,23 +92,21 @@ def sample_args(monkeypatch):
     patch_isdir(monkeypatch, True)
     DIR = "/tmp,/home/user/tmp"
 
-    return options.Args(dirs=DIR, perms_mask=0o077, syslog_port=514,
-                        syslog_server = "127.0.0.1", tcp=False, stdout=False,
-                        log_file="/var/log/owwatcher.log", debug=False)
+    return {"dirs": DIR, "perms_mask": 0o077, "syslog_port": 514,
+            "syslog_server": "127.0.0.1", "tcp": False, "stdout": False,
+            "log_file": "/var/log/owwatcher.log", "debug": False}
 
 def test_dirs(sample_args):
-    opt = options.Options(sample_args)
+    args = options.Args(**sample_args)
+    opt = options.Options(args)
 
     assert len(opt.dirs) == 2
     assert opt.dirs[0] == "/tmp"
     assert opt.dirs[1] == "/home/user/tmp"
 
 def test_invalid_perms_mask_large(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask=0o1000,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server,
-                        tcp=sample_args.tcp, stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug=sample_args.debug)
+    sample_args['perms_mask'] = 0o1000
+    args = options.Args(**sample_args)
 
     with pytest.raises(ValueError) as ve:
         opt = options.Options(args)
@@ -111,11 +114,8 @@ def test_invalid_perms_mask_large(sample_args):
     assert "ValueError: 1000 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
 
 def test_invalid_perms_mask_small(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask=-0o1,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server,
-                        tcp=sample_args.tcp, stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug=sample_args.debug)
+    sample_args['perms_mask'] = -0o1
+    args = options.Args(**sample_args)
 
     with pytest.raises(ValueError) as ve:
         opt = options.Options(args)
@@ -123,12 +123,8 @@ def test_invalid_perms_mask_small(sample_args):
     assert "ValueError: -1 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
 
 def test_invalid_perms_mask_type(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask="bogus",
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server,
-                        tcp=sample_args.tcp, stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug=sample_args.debug)
-
+    sample_args['perms_mask'] = "bogus"
+    args = options.Args(**sample_args)
 
     with pytest.raises(TypeError) as te:
         opt = options.Options(args)
@@ -136,52 +132,36 @@ def test_invalid_perms_mask_type(sample_args):
     assert "The permissions mask must be an octal integer" in str(te)
 
 def test_invalid_protocol(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server, tcp="bogus",
-                        stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug=sample_args.debug)
+    sample_args['tcp'] = "bogus"
+    args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
         opt = options.Options(args)
 
 def test_protocol_tcp(sample_args):
-    
-    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server, tcp=True,
-                        stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug=sample_args.debug)
+    sample_args['tcp'] = True
+    args = options.Args(**sample_args)
 
     opt = options.Options(args)
     assert opt.protocol == "tcp"
 
 def test_protocol_udp(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server, tcp=False,
-                        stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug=sample_args.debug)
+    sample_args['tcp'] = False
+    args = options.Args(**sample_args)
 
     opt = options.Options(args)
     assert opt.protocol == "udp"
 
 def test_invalid_stdout(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server,
-                        tcp=sample_args.tcp, stdout="bogus",
-                        log_file=sample_args.log_file, debug=sample_args.debug)
+    sample_args['stdout'] = "bogus"
+    args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
         opt = options.Options(args)
 
 def test_invalid_debug(sample_args):
-    args = options.Args(dirs=sample_args.dirs, perms_mask=sample_args.perms_mask,
-                        syslog_port=sample_args.syslog_port,
-                        syslog_server=sample_args.syslog_server,
-                        tcp=sample_args.tcp, stdout=sample_args.stdout,
-                        log_file=sample_args.log_file, debug="bogus")
+    sample_args['debug'] = "bogus"
+    args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
         opt = options.Options(args)
