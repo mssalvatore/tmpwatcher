@@ -121,18 +121,7 @@ class Options:
     def _get_defaults(cls, is_snap):
         return Args(dirs="/tmp", perms_mask=None, syslog_server=None,
                 syslog_port=None, tcp=False, stdout=False,
-                log_file=cls._get_default_log_file(is_snap), debug=False)
-
-    @classmethod
-    def _get_default_log_file(cls, is_snap):
-        return cls._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
-
-    @staticmethod
-    def _get_default_file_path(default_path, file_name, is_snap):
-        if is_snap:
-            return os.path.join(os.getenv('SNAP_DATA'), file_name)
-
-        return os.path.join(default_path, file_name)
+                log_file=None, debug=False)
 
     @classmethod
     def config_to_tuple(cls, config, is_snap):
