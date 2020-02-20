@@ -1,6 +1,7 @@
 import logging
 import logging.handlers
 import socket
+import sys
 
 # This factory class creates and configures owwatcher's loggers
 class OWWatcherLoggerConfigurer:
@@ -62,7 +63,7 @@ class OWWatcherLoggerConfigurer:
         logger.addHandler(file_handler)
 
     def _configure_stream_handler(self, logger, log_formatter):
-        stream_handler = logging.StreamHandler()
+        stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setFormatter(log_formatter)
         logger.addHandler(stream_handler)
 
