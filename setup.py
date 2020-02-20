@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="owwatcher",
-    version="1.1.1",
+    version="2.0.0",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
     description="Detects when world-writable directories or files are " \
