@@ -5,8 +5,12 @@ import inotify.constants as ic
 import os
 from pathlib import Path
 import signal
+import sys
 import threading
 import time
+
+class CriticalError(Exception):
+    pass
 
 # Because the snap package uses the system-files interface, all system files
 # are accessible at the path "/var/lib/snapd/hostfs". Since this is cumbersome
@@ -42,7 +46,7 @@ class OWWatcher():
         while self.process_events:
             time.sleep(1)
 
-    def stop(self,):
+    def stop(self):
         self.process_events = False
 
     def _watch_for_world_writable_files(self, watch_dir):
@@ -57,7 +61,7 @@ class OWWatcher():
 
         while True:
             try:
-                i = inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
+                i = self._setup_inotify_watches(watch_dir)
 
                 for event in i.event_gen(yield_nones=False):
                     self._process_event(watch_dir, event)
@@ -69,8 +73,20 @@ class OWWatcher():
                 self.logger.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
             except inotify.calls.InotifyError as iex:
                 self.logger.warning("Caught inotify error (%s). Rebuilding inotify watchers..." % str(iex))
+            except CriticalError as ce:
+                self.logger.critical(str(ce))
+                self.stop()
+                break
             except Exception as ex:
                 self.logger.error("Caught unexpected error (%s). Rebuilding inotify watchers..." % str(ex))
+
+    def _setup_inotify_watches(self, watch_dir):
+        try:
+            return inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
+        except PermissionError as pe:
+            raise CriticalError("Failed to set up a recursive watch due " \
+                    "to a permissions error. Try running owwatcher as " \
+                    "root. (%s)" % str(pe))
 
     def _process_event(self, watch_dir, event):
         self.logger.debug("Processing event")
