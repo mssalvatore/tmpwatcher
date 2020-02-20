@@ -27,7 +27,8 @@ def main():
             args = Options.config_to_tuple(config, is_snap)
 
         options = Options(args, is_snap)
-        configure_logging(options)
+        logger_configurer = OWWatcherLoggerConfigurer(options)
+        configure_logging(options, logger_configurer)
         _OWWATCHER = OWWatcher(options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap)
         register_signal_handlers()
     except Exception as ex:
@@ -91,11 +92,10 @@ def _read_config(config_path):
 
     return config
 
-def configure_logging(options):
+def configure_logging(options, logger_configurer):
     global _LOGGER
     global _SYSLOG_LOGGER
 
-    logger_configurer = OWWatcherLoggerConfigurer(options)
     _LOGGER = logger_configurer.get_owwatcher_logger()
     _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 
