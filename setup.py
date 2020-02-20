@@ -1,7 +1,10 @@
+import os
 import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
+os.umask(0o022)
 
 setuptools.setup(
     name="owwatcher",
