@@ -85,13 +85,21 @@ def test_dir_no_exist(monkeypatch):
 @pytest.fixture
 def sample_args():
     DIR = "/tmp,/home/user/tmp"
+
     return options.Args(dirs=DIR, perms_mask=0o077, syslog_port=514,
                         syslog_server = "127.0.0.1", tcp=False, stdout=False,
                         log_file="/var/log/owwatcher.log", debug=False)
 
+def test_dirs(monkeypatch, sample_args):
+    patch_isdir(monkeypatch, True)
+    opt = options.Options(sample_args)
+
+    assert len(opt.dirs) == 2
+    assert opt.dirs[0] == "/tmp"
+    assert opt.dirs[1] == "/home/user/tmp"
+
 def test_invalid_perms_mask_large(monkeypatch, sample_args):
     patch_isdir(monkeypatch, True)
-
     args = options.Args(dirs=sample_args.dirs, perms_mask=0o1000,
                         syslog_port=sample_args.syslog_port,
                         syslog_server=sample_args.syslog_server,
@@ -105,7 +113,6 @@ def test_invalid_perms_mask_large(monkeypatch, sample_args):
 
 def test_invalid_perms_mask_small(monkeypatch, sample_args):
     patch_isdir(monkeypatch, True)
-
     args = options.Args(dirs=sample_args.dirs, perms_mask=-0o1,
                         syslog_port=sample_args.syslog_port,
                         syslog_server=sample_args.syslog_server,
