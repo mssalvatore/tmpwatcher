@@ -27,7 +27,8 @@ def main():
             args = Options.config_to_tuple(config, is_snap)
 
         options = Options(args, is_snap)
-        configure_logging(options.debug, options.syslog_server, options.syslog_port, options.log_file)
+        logger_configurer = OWWatcherLoggerConfigurer(options)
+        configure_logging(options, logger_configurer)
         _OWWATCHER = OWWatcher(options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap)
         register_signal_handlers()
     except Exception as ex:
@@ -71,6 +72,11 @@ def _parse_args(is_snap):
                         help='IP address or hostname of a syslog server')
     parser.add_argument('-t', '--tcp', action='store_true',
                         help='Use TCP instead of UDP to send syslog messages.')
+    parser.add_argument('--stdout', action='store_true',
+                        help='Send output to stdout. This is the default behavior' \
+                             'if a log file is not specified. If a log file is ' \
+                             'specified, OWWatcher will not send output to stdout' \
+                             'unless this flag is set.')
     parser.add_argument('-l', '--log-file', action='store',
                         help='Path to log file')
     parser.add_argument('--debug', action='store_true',
@@ -86,11 +92,10 @@ def _read_config(config_path):
 
     return config
 
-def configure_logging(debug, syslog_server, syslog_port, log_file):
+def configure_logging(options, logger_configurer):
     global _LOGGER
     global _SYSLOG_LOGGER
 
-    logger_configurer = OWWatcherLoggerConfigurer(debug, syslog_server, syslog_port, log_file)
     _LOGGER = logger_configurer.get_owwatcher_logger()
     _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 

@@ -2,7 +2,7 @@ import collections
 from distutils import util
 import os
 
-Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp log_file debug')
+Args = collections.namedtuple('Args', 'dirs perms_mask syslog_port syslog_server tcp stdout log_file debug')
 
 class Options:
     INVALID_DIR_ERROR = "The directory '%s' does not exist."
@@ -10,7 +10,10 @@ class Options:
     INVALID_PERMS_ERROR = "%s is an invalid permissions mask. " + PERMS_FORMAT_MSG
     INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
     INVALID_PROTOCOL_ERROR = "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
+    INVALID_STDOUT_ERROR = "'%s' is not a valid value for the stdout option. Valid values are 'True' or 'False'."
     INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
+    PORT_WITHOUT_SERVER = "Cannot specify a syslog port without a syslog server."
+    SERVER_WITHOUT_PORT = "Cannot specify a syslog server without a syslog port."
 
 
     def __init__(self, args, is_snap=False):
@@ -18,10 +21,11 @@ class Options:
 
         self.dirs = (args.dirs if args.dirs is not None else defaults.dirs).split(',')
         self.perms_mask = Options._perms_mask_args_or_default(args, defaults.perms_mask)
-        self.syslog_port = int(args.syslog_port) if args.syslog_port is not None else defaults.syslog_port
-        self.syslog_server = args.syslog_server if args.syslog_server is not None else defaults.syslog_server
+        self.syslog_port = int(args.syslog_port) if args.syslog_port not in [None, ""] else defaults.syslog_port
+        self.syslog_server = args.syslog_server if args.syslog_server not in [None, ""] else defaults.syslog_server
         self.log_file = args.log_file if args.log_file is not None else defaults.log_file
         self._protocol = Options._protocol_args_or_default(args, defaults.tcp)
+        self.stdout = args.stdout if args.stdout else defaults.stdout
         self.debug = args.debug if args.debug else defaults.debug
 
         self._raise_on_invalid_options()
@@ -51,8 +55,10 @@ class Options:
     def _raise_on_invalid_options(self):
         self._raise_on_invalid_perms_mask()
         self._raise_on_invalid_syslog_port()
+        self._raise_on_invalid_syslog_server()
         self._raise_on_invalid_protocol()
         self._raise_on_invalid_dir()
+        self._raise_on_invalid_stdout()
         self._raise_on_invalid_debug()
 
     def _raise_on_invalid_perms_mask(self):
@@ -66,11 +72,24 @@ class Options:
                 raise ValueError(Options.INVALID_PERMS_ERROR % format(self.perms_mask, 'o'))
 
     def _raise_on_invalid_syslog_port(self):
+        if self.syslog_port is None:
+            if self.syslog_server is None:
+                return
+            else:
+                raise ValueError(Options.PORT_WITHOUT_SERVER)
+
         if not isinstance(self.syslog_port, int):
             raise TypeError(Options.INVALID_PORT_ERROR)
 
         if self.syslog_port < 1 or self.syslog_port > 65535:
             raise ValueError(Options.INVALID_PORT_ERROR)
+
+    def _raise_on_invalid_syslog_server(self):
+        if self.syslog_server is None :
+            if self.syslog_port is None:
+                return
+            else:
+                raise ValueError(Options.SERVER_WITHOUT_PORT)
 
     def _raise_on_invalid_dir(self):
         for d in self.dirs:
@@ -78,12 +97,18 @@ class Options:
                 raise ValueError(Options.INVALID_DIR_ERROR % d)
 
     def _raise_on_invalid_protocol(self):
-        if not isinstance(self._protocol, bool):
-            raise ValueError(Options.INVALID_PROTOCOL_ERROR % self._protocol)
+        Options._raise_on_invalid_bool(self._protocol, Options.INVALID_PROTOCOL_ERROR)
+
+    def _raise_on_invalid_stdout(self):
+        Options._raise_on_invalid_bool(self.stdout, Options.INVALID_STDOUT_ERROR)
 
     def _raise_on_invalid_debug(self):
-        if not isinstance(self.debug, bool):
-            raise ValueError(Options.INVALID_DEBUG_ERROR % self.debug)
+        Options._raise_on_invalid_bool(self.debug, Options.INVALID_DEBUG_ERROR)
+
+    @staticmethod
+    def _raise_on_invalid_bool(value, error_msg):
+        if not isinstance(value, bool):
+            raise ValueError(error_msg % value)
 
     @property
     def protocol(self):
@@ -94,20 +119,9 @@ class Options:
 
     @classmethod
     def _get_defaults(cls, is_snap):
-        return Args(dirs="/tmp", perms_mask=None, syslog_server="127.0.0.1",
-                syslog_port=514, log_file=cls._get_default_log_file(is_snap),
-                tcp=False, debug=False)
-
-    @classmethod
-    def _get_default_log_file(cls, is_snap):
-        return cls._get_default_file_path('/var/log', 'owwatcher.log', is_snap)
-
-    @staticmethod
-    def _get_default_file_path(default_path, file_name, is_snap):
-        if is_snap:
-            return os.path.join(os.getenv('SNAP_DATA'), file_name)
-
-        return os.path.join(default_path, file_name)
+        return Args(dirs="/tmp", perms_mask=None, syslog_server=None,
+                syslog_port=None, tcp=False, stdout=False,
+                log_file=None, debug=False)
 
     @classmethod
     def config_to_tuple(cls, config, is_snap):
