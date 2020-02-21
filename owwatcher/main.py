@@ -39,7 +39,7 @@ def main():
     _LOGGER.info("Starting owwatcher...")
     _log_config_options(options)
 
-    _OWWATCHER.run(options.dirs)
+    _OWWATCHER.run(options.dirs, options.recursive)
 
 def check_if_snap():
     return 'SNAP_DATA' in os.environ
@@ -62,6 +62,10 @@ def _parse_args(is_snap):
     parser.add_argument('-d', '--dirs', action='store',
                         help='A comma-separated list of directories to watch ' \
                              'for world writable files/dirs')
+    parser.add_argument('-r', '--recursive', action='store_true',
+                        help='Set up inotify watches recursively. This can' \
+                             'identify more potential vulnerabilities but will' \
+                             'results in a lot of false positives.')
     parser.add_argument('-m', '--perms-mask', action='store',
                         help='Instead of alerting only on world writable files, ' \
                              'use a mask (e.g. 077) to identify files with ' \
@@ -112,6 +116,7 @@ def receive_signal(signum, stack_frame):
 
 def _log_config_options(options):
     _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
+    _LOGGER.info('Option "recursive": %s', options.recursive)
     _LOGGER.info('Option "perms_mask": %s', _format_perms_mask_output(options))
     _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
     _LOGGER.info('Option "syslog_port": %s', options.syslog_port)

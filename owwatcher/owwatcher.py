@@ -5,8 +5,12 @@ import inotify.constants as ic
 import os
 from pathlib import Path
 import signal
+import sys
 import threading
 import time
+
+class CriticalError(Exception):
+    pass
 
 # Because the snap package uses the system-files interface, all system files
 # are accessible at the path "/var/lib/snapd/hostfs". Since this is cumbersome
@@ -30,9 +34,10 @@ class OWWatcher():
         self.syslog_logger = syslog_logger
         self.is_snap = is_snap
 
-    def run(self, dirs):
-        for dir in dirs:
-            owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files, args=(dir,), daemon=True)
+    def run(self, dirs, recursive):
+        for d in dirs:
+            owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files,
+                                                args=(d,recursive,), daemon=True)
             owwatcher_thread.start()
 
         # TODO: Daemon threads are used because the threads are often blocked
@@ -42,10 +47,10 @@ class OWWatcher():
         while self.process_events:
             time.sleep(1)
 
-    def stop(self,):
+    def stop(self):
         self.process_events = False
 
-    def _watch_for_world_writable_files(self, watch_dir):
+    def _watch_for_world_writable_files(self, watch_dir, recursive):
         self.logger.info("Setting up inotify watches on %s and its subdirectories" % watch_dir)
 
         if self.is_snap:
@@ -57,7 +62,7 @@ class OWWatcher():
 
         while True:
             try:
-                i = inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
+                i = self._setup_inotify_watches(watch_dir, recursive)
 
                 for event in i.event_gen(yield_nones=False):
                     self._process_event(watch_dir, event)
@@ -69,8 +74,25 @@ class OWWatcher():
                 self.logger.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
             except inotify.calls.InotifyError as iex:
                 self.logger.warning("Caught inotify error (%s). Rebuilding inotify watchers..." % str(iex))
+            except CriticalError as ce:
+                self.logger.critical(str(ce))
+                self.stop()
+                break
             except Exception as ex:
                 self.logger.error("Caught unexpected error (%s). Rebuilding inotify watchers..." % str(ex))
+
+    def _setup_inotify_watches(self, watch_dir, recursive):
+        try:
+            if recursive:
+                return inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
+            else:
+                i = inotify.adapters.Inotify()
+                i.add_watch(watch_dir)
+
+                return i
+        except PermissionError as pe:
+            raise CriticalError("Failed to set up inotify watches due to a " \
+                    "permissions error. Try running OWWatcher as root. (%s)" % str(pe))
 
     def _process_event(self, watch_dir, event):
         self.logger.debug("Processing event")
