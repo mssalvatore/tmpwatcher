@@ -1,13 +1,14 @@
 import collections
 from distutils import util
 import os
+import os.path
 
 Args = collections.namedtuple('Args', 'dirs recursive perms_mask archive_path ' \
                                       'syslog_port syslog_server tcp stdout ' \
                                       'log_file debug')
 
 class Options:
-    INVALID_DIR_ERROR = "The directory '%s' does not exist."
+    INVALID_DIR_ERROR = "'%s' does not exist or is not a directory."
     INVALID_ARCHIVE_PATH_ERROR = "Cannot archive files: %s" % INVALID_DIR_ERROR
     PERMS_FORMAT_MSG = "The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive."
     INVALID_PERMS_ERROR = "%s is an invalid permissions mask. " + PERMS_FORMAT_MSG
@@ -34,6 +35,9 @@ class Options:
         self.debug = args.debug if args.debug else defaults.debug
 
         self._raise_on_invalid_options()
+
+        if self.archive_path is not None:
+            self.archive_path = os.path.realpath(self.archive_path)
 
     @staticmethod
     def _perms_mask_args_or_default(args, default):

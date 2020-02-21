@@ -1,4 +1,5 @@
 import os
+import os.path
 from owwatcher import options
 import pytest
 
@@ -175,6 +176,17 @@ def test_invalid_archive_path(SAMPLE_ARGS):
         opt = options.Options(args)
 
     assert "Cannot archive files:" in str(ve)
+
+def test_realpath_archive_path(monkeypatch, sample_args):
+    realpath =  "/home/user/tmp"
+    monkeypatch.setattr(os.path, "realpath", lambda _: realpath)
+
+    sample_args['archive_path'] = "../tmp"
+    args = options.Args(**sample_args)
+    opt = options.Options(args)
+
+    assert opt.archive_path == realpath
+    
 
 def test_invalid_stdout(sample_args):
     sample_args['stdout'] = "bogus"
