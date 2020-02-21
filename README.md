@@ -114,6 +114,9 @@ $> deactivate
 
 ### Tips and Notes
 
+1. This tool must be run as root if you want to observe /tmp with the
+   "recursive" option set.
+
 1. Many programs do not consider permissions at all when writing files to
 `/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
 determine what permissions the files are created with. This means that a
@@ -184,14 +187,6 @@ A test coverage report can be viewed by pointing your browser at
 ./htmlcov/index.html
 
 ### Limitations and Future Work
-
-1. Currently, this tool must be run as root if you want to observe /tmp. It
-   uses the recursive capability of the [python
-   inotify](https://pypi.org/project/inotify/) library to recursively watch the
-   specified directory. If the user does not have the appropriate permissions
-   to watch all files within the directory, the inotify library fails. A
-   future improvement is planned that would allow the user to specify whether
-   or not to skip files they cannot access.
 
 1. The syslog alerts only show what file or directory was found to be world
    writable. It would simplify the work of the researcher if it could also make
