@@ -70,6 +70,11 @@ def _parse_args(is_snap):
                         help='Instead of alerting only on world writable files, ' \
                              'use a mask (e.g. 077) to identify files with ' \
                              'incorrect permissions', type=_octal_int)
+    parser.add_argument('-a', '--archive-path', action='store',
+                        help='A directory where files identified by OWWatcher ' \
+                             'can be archived. If this option is set, OWWatcher '\
+                             'will *attempt* to copy files that are world writable '\
+                             'or match perms-mask so they can be inspected.')
     parser.add_argument('-p', '--syslog-port', action='store', type=int,
                         help='The port that the syslog server is listening on')
     parser.add_argument('-s', '--syslog-server', action='store',
@@ -118,6 +123,7 @@ def _log_config_options(options):
     _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
     _LOGGER.info('Option "recursive": %s', options.recursive)
     _LOGGER.info('Option "perms_mask": %s', _format_perms_mask_output(options))
+    _LOGGER.info('Option "archive_path": %s', options.archive_path)
     _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
     _LOGGER.info('Option "syslog_port": %s', options.syslog_port)
     _LOGGER.info('Option "protocol": %s', options.protocol)
