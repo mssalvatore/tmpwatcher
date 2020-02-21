@@ -87,7 +87,7 @@ class OWWatcher():
                 return inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
             else:
                 i = inotify.adapters.Inotify()
-                i.add_watch(watch_dir)
+                i.add_watch(watch_dir, mask=OWWatcher.EVENT_MASK)
 
                 return i
         except PermissionError as pe:
