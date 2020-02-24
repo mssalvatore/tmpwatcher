@@ -21,6 +21,7 @@ def main():
     global _OWWATCHER
     try:
         is_snap = check_if_snap()
+
         (parser, args) = _parse_args(is_snap)
         if args.config_path:
             config = _read_config(args.config_path)
@@ -29,7 +30,9 @@ def main():
         options = Options(args, is_snap)
         logger_configurer = OWWatcherLoggerConfigurer(options)
         configure_logging(options, logger_configurer)
-        _OWWATCHER = OWWatcher(options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap)
+        _OWWATCHER = OWWatcher(options.perms_mask, options.archive_path,
+                               _LOGGER, _SYSLOG_LOGGER, is_snap)
+
         register_signal_handlers()
     except Exception as ex:
         print("Error during initialization: %s" % str(ex), file=sys.stderr)
@@ -70,6 +73,11 @@ def _parse_args(is_snap):
                         help='Instead of alerting only on world writable files, ' \
                              'use a mask (e.g. 077) to identify files with ' \
                              'incorrect permissions', type=_octal_int)
+    parser.add_argument('-a', '--archive-path', action='store',
+                        help='A directory where files identified by OWWatcher ' \
+                             'can be archived. If this option is set, OWWatcher '\
+                             'will *attempt* to copy files that are world writable '\
+                             'or match perms-mask so they can be inspected.')
     parser.add_argument('-p', '--syslog-port', action='store', type=int,
                         help='The port that the syslog server is listening on')
     parser.add_argument('-s', '--syslog-server', action='store',
@@ -118,6 +126,7 @@ def _log_config_options(options):
     _LOGGER.info('Option "dirs": %s', ','.join(options.dirs))
     _LOGGER.info('Option "recursive": %s', options.recursive)
     _LOGGER.info('Option "perms_mask": %s', _format_perms_mask_output(options))
+    _LOGGER.info('Option "archive_path": %s', options.archive_path)
     _LOGGER.info('Option "syslog_server": %s', options.syslog_server)
     _LOGGER.info('Option "syslog_port": %s', options.syslog_port)
     _LOGGER.info('Option "protocol": %s', options.protocol)

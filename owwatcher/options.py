@@ -1,12 +1,15 @@
 import collections
 from distutils import util
 import os
+import os.path
 
-Args = collections.namedtuple('Args', 'dirs recursive perms_mask syslog_port '\
-                                      'syslog_server tcp stdout log_file debug')
+Args = collections.namedtuple('Args', 'dirs recursive perms_mask archive_path ' \
+                                      'syslog_port syslog_server tcp stdout ' \
+                                      'log_file debug')
 
 class Options:
-    INVALID_DIR_ERROR = "The directory '%s' does not exist."
+    INVALID_DIR_ERROR = "'%s' does not exist or is not a directory."
+    INVALID_ARCHIVE_PATH_ERROR = "Cannot archive files: %s" % INVALID_DIR_ERROR
     PERMS_FORMAT_MSG = "The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive."
     INVALID_PERMS_ERROR = "%s is an invalid permissions mask. " + PERMS_FORMAT_MSG
     INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
@@ -21,16 +24,20 @@ class Options:
         defaults = Options._get_defaults(is_snap)
 
         self.dirs = (args.dirs if args.dirs is not None else defaults.dirs).split(',')
+        self.recursive = args.recursive if args.recursive else defaults.recursive
         self.perms_mask = Options._perms_mask_args_or_default(args, defaults.perms_mask)
+        self.archive_path = args.archive_path if args.archive_path else defaults.archive_path
         self.syslog_port = int(args.syslog_port) if args.syslog_port not in [None, ""] else defaults.syslog_port
         self.syslog_server = args.syslog_server if args.syslog_server not in [None, ""] else defaults.syslog_server
         self.log_file = args.log_file if args.log_file is not None else defaults.log_file
         self._protocol = Options._protocol_args_or_default(args, defaults.tcp)
-        self.recursive = args.recursive if args.recursive else defaults.recursive
         self.stdout = args.stdout if args.stdout else defaults.stdout
         self.debug = args.debug if args.debug else defaults.debug
 
         self._raise_on_invalid_options()
+
+        if self.archive_path is not None:
+            self.archive_path = os.path.realpath(self.archive_path)
 
     @staticmethod
     def _perms_mask_args_or_default(args, default):
@@ -59,8 +66,9 @@ class Options:
         self._raise_on_invalid_syslog_port()
         self._raise_on_invalid_syslog_server()
         self._raise_on_invalid_protocol()
-        self._raise_on_invalid_dir()
+        self._raise_on_invalid_dirs()
         self._raise_on_invalid_recursive()
+        self._raise_on_invalid_archive_path()
         self._raise_on_invalid_stdout()
         self._raise_on_invalid_debug()
 
@@ -94,10 +102,18 @@ class Options:
             else:
                 raise ValueError(Options.SERVER_WITHOUT_PORT)
 
-    def _raise_on_invalid_dir(self):
+    def _raise_on_invalid_archive_path(self):
+        if self.archive_path is not None:
+            Options._raise_on_invalid_directory(self.archive_path, Options.INVALID_ARCHIVE_PATH_ERROR)
+
+    def _raise_on_invalid_dirs(self):
         for d in self.dirs:
-            if not os.path.isdir(d):
-                raise ValueError(Options.INVALID_DIR_ERROR % d)
+            Options._raise_on_invalid_directory(d, Options.INVALID_DIR_ERROR)
+
+    @staticmethod
+    def _raise_on_invalid_directory(d, error_msg):
+        if not os.path.isdir(d):
+            raise ValueError(error_msg % d)
 
     def _raise_on_invalid_protocol(self):
         Options._raise_on_invalid_bool(self._protocol, Options.INVALID_PROTOCOL_ERROR)
@@ -125,9 +141,9 @@ class Options:
 
     @classmethod
     def _get_defaults(cls, is_snap):
-        return Args(dirs="/tmp", recursive=False, perms_mask=None, syslog_server=None,
-                syslog_port=None, tcp=False, stdout=False,
-                log_file=None, debug=False)
+        return Args(dirs="/tmp", recursive=False, perms_mask=None,
+                    archive_path=None, syslog_server=None, syslog_port=None,
+                    tcp=False, stdout=False, log_file=None, debug=False)
 
     @classmethod
     def config_to_tuple(cls, config, is_snap):
