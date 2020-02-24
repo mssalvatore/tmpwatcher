@@ -35,8 +35,7 @@ IN_CLOSE_WRITE = "IN_CLOSE_WRITE"
 IN_ISDIR = "IN_ISDIR"
 
 class OWWatcher():
-    # TODO: I don't think we need ic.IN_ISDIR. Test this theory.
-    EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR | ic.IN_CLOSE_WRITE
+    EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
     INTERESTING_EVENTS = {IN_ATTRIB, IN_CREATE, IN_MOVED_TO, IN_CLOSE_WRITE}
 
     def __init__(self, perms_mask, archive_path, logger, syslog_logger, is_snap=False):
@@ -232,6 +231,7 @@ class OWWatcher():
 
         # No need to save off directories or files that weren't written to
         if (IN_CLOSE_WRITE not in event_types) or (IN_ISDIR in event_types):
+            self.logger.debug("Not archiving file. Event types are: %s" % ','.join(event_types))
             return
 
         archive_file_thread = threading.Thread(target=self._check_and_copy,
