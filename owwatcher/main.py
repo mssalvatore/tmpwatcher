@@ -21,6 +21,7 @@ def main():
     global _OWWATCHER
     try:
         is_snap = check_if_snap()
+
         (parser, args) = _parse_args(is_snap)
         if args.config_path:
             config = _read_config(args.config_path)
@@ -29,7 +30,9 @@ def main():
         options = Options(args, is_snap)
         logger_configurer = OWWatcherLoggerConfigurer(options)
         configure_logging(options, logger_configurer)
-        _OWWATCHER = OWWatcher(options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap)
+        _OWWATCHER = OWWatcher(options.perms_mask, options.archive_path,
+                               _LOGGER, _SYSLOG_LOGGER, is_snap)
+
         register_signal_handlers()
     except Exception as ex:
         print("Error during initialization: %s" % str(ex), file=sys.stderr)
