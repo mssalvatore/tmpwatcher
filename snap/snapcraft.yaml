@@ -33,7 +33,7 @@ apps:
             - network
             - system-backup
     owwatcherd:
-        command: bin/owwatcher
+        command: bin/owwatcher -c /var/snap/owwatcher/current/owwatcher.conf
         plugs:
             - network
             - system-backup

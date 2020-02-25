@@ -1,11 +1,14 @@
+import os
 import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+os.umask(0o022)
+
 setuptools.setup(
     name="owwatcher",
-    version="1.1.1",
+    version="2.0.0",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
     description="Detects when world-writable directories or files are " \

@@ -1,3 +1,4 @@
 #!/bin/bash
 
 cp $SNAP/lib/python3.6/site-packages/owwatcher/owwatcher-default.conf $SNAP_DATA/owwatcher.conf
+snapctl stop --disable owwatcher.owwatcherd

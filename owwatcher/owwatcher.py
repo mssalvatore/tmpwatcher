@@ -4,9 +4,14 @@ import inotify.adapters
 import inotify.constants as ic
 import os
 from pathlib import Path
+import shutil
 import signal
+import sys
 import threading
 import time
+
+class CriticalError(Exception):
+    pass
 
 # Because the snap package uses the system-files interface, all system files
 # are accessible at the path "/var/lib/snapd/hostfs". Since this is cumbersome
@@ -17,22 +22,42 @@ SNAP_HOSTFS_PATH_PREFIX = "/var/lib/snapd/hostfs"
 VULNERABILITY_MITIGATED_MSG = " -- Vulnerabilities are potentially mitigated as " \
                               "one or more parent directories do not have " \
                               "improperly configured permissions"
+PATH_TRAVERSAL_ERROR = "Attempting to archive %s may result in files being " \
+                       "written outside of the archive path. Someone may be " \
+                       "attempting something nasty or extremely unorthodox"
 DEFAULT_OW_MASK = 0o002
+ARCHIVE_UMASK = 0o177
+
+IN_ATTRIB = "IN_ATTRIB"
+IN_CREATE = "IN_CREATE"
+IN_MOVED_TO = "IN_MOVED_TO"
+IN_CLOSE_WRITE = "IN_CLOSE_WRITE"
+IN_ISDIR = "IN_ISDIR"
 
 class OWWatcher():
-    EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_ISDIR
-    INTERESTING_EVENTS = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
+    EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
+    INTERESTING_EVENTS = {IN_ATTRIB, IN_CREATE, IN_MOVED_TO, IN_CLOSE_WRITE}
 
-    def __init__(self, perms_mask, logger, syslog_logger, is_snap=False):
+    def __init__(self, perms_mask, archive_path, logger, syslog_logger, is_snap=False):
         self.process_events = True
         self.perms_mask = perms_mask
+        self.archive_path = archive_path
         self.logger = logger
         self.syslog_logger = syslog_logger
         self.is_snap = is_snap
 
-    def run(self, dirs):
-        for dir in dirs:
-            owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files, args=(dir,), daemon=True)
+        # SECURITY: Set the umask so that archived files do not have go+rwx or
+        # u+x permissions. Prevents files which may be malicious and placed in
+        # /tmp by an attacker from being accidentally executed from the archive
+        # directory. It also prevents the contents of archive_path from being
+        # read by an attacker. If, for some reason, archive_path's permissions
+        # are not strict enough.
+        os.umask(ARCHIVE_UMASK)
+
+    def run(self, dirs, recursive):
+        for d in dirs:
+            owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files,
+                                                args=(d,recursive,), daemon=True)
             owwatcher_thread.start()
 
         # TODO: Daemon threads are used because the threads are often blocked
@@ -42,10 +67,10 @@ class OWWatcher():
         while self.process_events:
             time.sleep(1)
 
-    def stop(self,):
+    def stop(self):
         self.process_events = False
 
-    def _watch_for_world_writable_files(self, watch_dir):
+    def _watch_for_world_writable_files(self, watch_dir, recursive):
         self.logger.info("Setting up inotify watches on %s and its subdirectories" % watch_dir)
 
         if self.is_snap:
@@ -57,7 +82,7 @@ class OWWatcher():
 
         while True:
             try:
-                i = inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
+                i = self._setup_inotify_watches(watch_dir, recursive)
 
                 for event in i.event_gen(yield_nones=False):
                     self._process_event(watch_dir, event)
@@ -69,8 +94,25 @@ class OWWatcher():
                 self.logger.warning("Caught a terminal inotify event (%s). Rebuilding inotify watchers..." % str(tex))
             except inotify.calls.InotifyError as iex:
                 self.logger.warning("Caught inotify error (%s). Rebuilding inotify watchers..." % str(iex))
+            except CriticalError as ce:
+                self.logger.critical(str(ce))
+                self.stop()
+                break
             except Exception as ex:
                 self.logger.error("Caught unexpected error (%s). Rebuilding inotify watchers..." % str(ex))
+
+    def _setup_inotify_watches(self, watch_dir, recursive):
+        try:
+            if recursive:
+                return inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
+            else:
+                i = inotify.adapters.Inotify()
+                i.add_watch(watch_dir, mask=OWWatcher.EVENT_MASK)
+
+                return i
+        except PermissionError as pe:
+            raise CriticalError("Failed to set up inotify watches due to a " \
+                    "permissions error. Try running OWWatcher as root. (%s)" % str(pe))
 
     def _process_event(self, watch_dir, event):
         self.logger.debug("Processing event")
@@ -83,13 +125,9 @@ class OWWatcher():
             self.logger.debug("No relevant event types found")
             return
 
-        if self.perms_mask is None:
-            if self._is_world_writable(event_path, filename):
-                self.logger.info("Found world writable file/directory. Sending alert.")
-                self._send_ow_alert(watch_dir, event_path, filename)
-        elif self._check_perms_mask(event_path, filename):
-            self.logger.info("Found file matching the permissions mask. Sending alert.")
-            self._send_perms_mask_alert(watch_dir, event_path, filename)
+        alert_sent = self._evaluate_permissions(watch_dir, event_path, filename)
+        if alert_sent:
+            self._archive_file(event_types, watch_dir, event_path, filename)
 
     def _log_received_event_debug_msg(self, event_path, filename, event_types):
         if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
@@ -102,6 +140,19 @@ class OWWatcher():
         # events and received events. If there are any items in the intersection, we
         # know there was at least one interesting event.
         return len(interesting_events.intersection(set(event_types))) > 0
+
+    def _evaluate_permissions(self, watch_dir, event_path, filename):
+        if self.perms_mask is None:
+            if self._is_world_writable(event_path, filename):
+                self.logger.info("Found world writable file/directory. Sending alert.")
+                self._send_ow_alert(watch_dir, event_path, filename)
+                return True
+        elif self._check_perms_mask(event_path, filename):
+            self.logger.info("Found file matching the permissions mask. Sending alert.")
+            self._send_perms_mask_alert(watch_dir, event_path, filename)
+            return True
+
+        return False
 
     def _is_world_writable(self, path, filename):
         self.logger.debug("Checking if file %s at path %s is world writable" % (filename, path))
@@ -173,3 +224,45 @@ class OWWatcher():
         except (FileNotFoundError)as fnf:
             self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
             return True
+
+    def _archive_file(self, event_types, watch_dir, event_path, filename):
+        if self.archive_path is None:
+            return
+
+        # No need to save off directories or files that weren't written to
+        if (IN_CLOSE_WRITE not in event_types) or (IN_ISDIR in event_types):
+            self.logger.debug("Not archiving file. Event types are: %s" % ','.join(event_types))
+            return
+
+        archive_file_thread = threading.Thread(target=self._check_and_copy,
+                                               args=(watch_dir, event_path, filename),
+                                               daemon=True)
+        archive_file_thread.start()
+
+        # only unit tests currently use this return value
+        return archive_file_thread
+
+    def _check_and_copy(self, watch_dir, event_path, filename):
+        try:
+            file_path = os.path.join(event_path, filename)
+            real_file_path = os.path.realpath(file_path)
+            real_copy_path = os.path.realpath(os.path.join(self.archive_path, filename))
+            dst = "%s.%f" % (real_copy_path, time.time())
+
+            # This check mostly alleviates my paranoia that an attacker could
+            # manipulate this feature into writing arbitrary files to the
+            # filesystem. There's still the potential for a TOCTOU race, but I'm
+            # not convinced this is really an issue even without this paranoid
+            # check, especially if OWWatcher is installed as a snap.
+            if ((not real_file_path.startswith(watch_dir)) or
+               (not real_copy_path.startswith(self.archive_path))):
+                self.logger.error(PATH_TRAVERSAL_ERROR % file_path)
+                return
+
+            # SECURITY: Make sure follow_symlinks is always false!
+            shutil.copy2(real_file_path, dst, follow_symlinks=False)
+        except (FileNotFoundError)as fnf:
+            self.logger.debug("File was deleted before it could be archived: %s" % str(fnf))
+        except Exception as e:
+            self.logger.error("An unexpected error occurred while trying to " \
+                              "archive file '%s': %s" % (real_file_path, str(e)))
