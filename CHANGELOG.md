@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [UNRELEASED]
+### Changed
+- File archive behavior: Run a thread for archiving files, rather than incurring
+  the overhead of creating a thread for each file that needs to be copied.
 
 ## [2.0.0] - 2020-02-24
 ### Added

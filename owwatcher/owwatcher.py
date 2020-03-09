@@ -4,6 +4,8 @@ import inotify.adapters
 import inotify.constants as ic
 import os
 from pathlib import Path
+import queue
+from queue import LifoQueue
 import shutil
 import signal
 import sys
@@ -34,6 +36,7 @@ IN_MOVED_TO = "IN_MOVED_TO"
 IN_CLOSE_WRITE = "IN_CLOSE_WRITE"
 IN_ISDIR = "IN_ISDIR"
 
+
 class OWWatcher():
     EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
     INTERESTING_EVENTS = {IN_ATTRIB, IN_CREATE, IN_MOVED_TO, IN_CLOSE_WRITE}
@@ -45,6 +48,7 @@ class OWWatcher():
         self.logger = logger
         self.syslog_logger = syslog_logger
         self.is_snap = is_snap
+        self.archive_queue_timeout_sec = 2
 
         # SECURITY: Set the umask so that archived files do not have go+rwx or
         # u+x permissions. Prevents files which may be malicious and placed in
@@ -54,11 +58,14 @@ class OWWatcher():
         # are not strict enough.
         os.umask(ARCHIVE_UMASK)
 
+    def __del__(self):
+        self.process_events = False
+
     def run(self, dirs, recursive):
         for d in dirs:
-            owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files,
-                                                args=(d,recursive,), daemon=True)
-            owwatcher_thread.start()
+            # Use LIFO queue, because copying anything is better than trying to copy
+            # everything and ending up with nothing.
+            self._run_watcher_thread(d, recursive, LifoQueue())
 
         # TODO: Daemon threads are used because the threads are often blocked
         # waiting on inotify events. Find a non-blocking inotify solution to remove
@@ -67,10 +74,16 @@ class OWWatcher():
         while self.process_events:
             time.sleep(1)
 
+    def _run_watcher_thread(self, d, recursive, archive_file_queue):
+        owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files,
+                                            args=(d, recursive, archive_file_queue,),
+                                            daemon=True)
+        owwatcher_thread.start()
+
     def stop(self):
         self.process_events = False
 
-    def _watch_for_world_writable_files(self, watch_dir, recursive):
+    def _watch_for_world_writable_files(self, watch_dir, recursive, archive_file_queue):
         self.logger.info("Setting up inotify watches on %s and its subdirectories" % watch_dir)
 
         if self.is_snap:
@@ -80,12 +93,14 @@ class OWWatcher():
                     " running as a snap. Actual inotify watch set up on"\
                     " dir %s" % watch_dir)
 
+        self._run_archive_files(watch_dir, archive_file_queue)
+
         while True:
             try:
                 i = self._setup_inotify_watches(watch_dir, recursive)
 
                 for event in i.event_gen(yield_nones=False):
-                    self._process_event(watch_dir, event)
+                    self._process_event(watch_dir, event, archive_file_queue)
             except FileNotFoundError as fnf:
                 msg = "Caught error while adding initial inotify watches on tree [%s]: %s" % (watch_dir, str(fnf))
                 self.logger.warning(msg)
@@ -101,6 +116,14 @@ class OWWatcher():
             except Exception as ex:
                 self.logger.error("Caught unexpected error (%s). Rebuilding inotify watchers..." % str(ex))
 
+    def _run_archive_files(self, watch_dir, archive_file_queue):
+        archive_thread = threading.Thread(target=self._archive_files,
+                args=(watch_dir,archive_file_queue,), daemon=True)
+        archive_thread.start()
+
+        # only unit tests currently use this return value
+        return archive_thread
+
     def _setup_inotify_watches(self, watch_dir, recursive):
         try:
             if recursive:
@@ -114,7 +137,7 @@ class OWWatcher():
             raise CriticalError("Failed to set up inotify watches due to a " \
                     "permissions error. Try running OWWatcher as root. (%s)" % str(pe))
 
-    def _process_event(self, watch_dir, event):
+    def _process_event(self, watch_dir, event, archive_file_queue):
         self.logger.debug("Processing event")
 
         # '_' variable stands in for "headers", which is not used in this function
@@ -125,9 +148,9 @@ class OWWatcher():
             self.logger.debug("No relevant event types found")
             return
 
-        alert_sent = self._evaluate_permissions(watch_dir, event_path, filename)
+        alert_sent = self._evaluate_permissions(watch_dir, event_path, filename, archive_file_queue)
         if alert_sent:
-            self._archive_file(event_types, watch_dir, event_path, filename)
+            archive_file_queue.put((event_types, event_path, filename))
 
     def _log_received_event_debug_msg(self, event_path, filename, event_types):
         if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
@@ -141,7 +164,7 @@ class OWWatcher():
         # know there was at least one interesting event.
         return len(interesting_events.intersection(set(event_types))) > 0
 
-    def _evaluate_permissions(self, watch_dir, event_path, filename):
+    def _evaluate_permissions(self, watch_dir, event_path, filename, archive_file_queue):
         if self.perms_mask is None:
             if self._is_world_writable(event_path, filename):
                 self.logger.info("Found world writable file/directory. Sending alert.")
@@ -225,40 +248,39 @@ class OWWatcher():
             self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
             return True
 
-    def _archive_file(self, event_types, watch_dir, event_path, filename):
-        if self.archive_path is None:
-            return
+    # TODO: Refactor into FileArchiver class
+    def _archive_files(self, watch_dir, archive_file_queue):
+        while self.process_events:
+            try:
+                (event_types, event_path, filename) = \
+                    archive_file_queue.get(block=True, timeout=self.archive_queue_timeout_sec)
+            except queue.Empty:
+                continue
 
-        # No need to save off directories or files that weren't written to
-        if (IN_CLOSE_WRITE not in event_types) or (IN_ISDIR in event_types):
-            self.logger.debug("Not archiving file. Event types are: %s" % ','.join(event_types))
-            return
+            if self.archive_path is None:
+                continue
 
-        archive_file_thread = threading.Thread(target=self._check_and_copy,
-                                               args=(watch_dir, event_path, filename),
-                                               daemon=True)
-        archive_file_thread.start()
+            # No need to save off directories or files that weren't written to
+            if self._event_is_archivable(event_types):
+                self.logger.debug("Not archiving file. Event types are: %s" % ','.join(event_types))
+                continue
 
-        # only unit tests currently use this return value
-        return archive_file_thread
+            self.logger.debug("Archiving file %s/%s" % (watch_dir, filename))
+            self._copy_file(watch_dir, event_path, filename)
 
-    def _check_and_copy(self, watch_dir, event_path, filename):
+    def _event_is_archivable(self, event_types):
+        return ((IN_CLOSE_WRITE not in event_types) or (IN_ISDIR in event_types))
+
+    def _copy_file(self, watch_dir, event_path, filename):
         try:
-            file_path = os.path.join(event_path, filename)
-            real_file_path = os.path.realpath(file_path)
-            real_copy_path = os.path.realpath(os.path.join(self.archive_path, filename))
-            dst = "%s.%f" % (real_copy_path, time.time())
+            (file_path, real_file_path, real_copy_path) = \
+                self._get_real_file_paths(event_path, filename)
 
-            # This check mostly alleviates my paranoia that an attacker could
-            # manipulate this feature into writing arbitrary files to the
-            # filesystem. There's still the potential for a TOCTOU race, but I'm
-            # not convinced this is really an issue even without this paranoid
-            # check, especially if OWWatcher is installed as a snap.
-            if ((not real_file_path.startswith(watch_dir)) or
-               (not real_copy_path.startswith(self.archive_path))):
+            if (self._directory_traversal_possible(watch_dir, real_file_path, real_copy_path)):
                 self.logger.error(PATH_TRAVERSAL_ERROR % file_path)
                 return
 
+            dst = "%s.%f" % (real_copy_path, time.time())
             # SECURITY: Make sure follow_symlinks is always false!
             shutil.copy2(real_file_path, dst, follow_symlinks=False)
         except (FileNotFoundError)as fnf:
@@ -266,3 +288,19 @@ class OWWatcher():
         except Exception as e:
             self.logger.error("An unexpected error occurred while trying to " \
                               "archive file '%s': %s" % (real_file_path, str(e)))
+
+    def _get_real_file_paths(self, event_path, filename):
+            file_path = os.path.join(event_path, filename)
+            real_file_path = os.path.realpath(file_path)
+            real_copy_path = os.path.realpath(os.path.join(self.archive_path, filename))
+
+            return (file_path, real_file_path, real_copy_path)
+
+    def _directory_traversal_possible(self, watch_dir, real_file_path, real_copy_path):
+            # This check mostly alleviates my paranoia that an attacker could
+            # manipulate this feature into writing arbitrary files to the
+            # filesystem. There's still the potential for a TOCTOU race, but I'm
+            # not convinced this is really an issue even without this paranoid
+            # check, especially if OWWatcher is installed as a snap.
+            return ((not real_file_path.startswith(watch_dir)) or
+                    (not real_copy_path.startswith(self.archive_path)))

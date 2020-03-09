@@ -3,27 +3,38 @@ import logging
 import os
 from owwatcher import owwatcher
 import pytest
+from queue import LifoQueue
 import shutil
 import time
 from unittest.mock import MagicMock
 
 class OWWatcherTest(owwatcher.OWWatcher):
+
     def __init__(self, monkeypatch, perms_mask, archive_path, logger, syslog_logger, is_snap=False):
         super().__init__(perms_mask, archive_path, logger, syslog_logger, is_snap=False)
+        self.archive_queue_timeout_sec = .01
+
         syslog_logger.warning = MagicMock()
         syslog_logger.info = MagicMock()
 
         logger.error = MagicMock()
 
-        self.archive_file_called = False
+        self.copy_file_called = False
 
         shutil.copy2 = MagicMock()
         os.path.realpath = MagicMock()
 
-    def _archive_file(self, event_types, watch_dir, event_path, filename):
-        self.archive_file_called = True
+        self.archive_file_queue = LifoQueue()
+
+    def _copy_file(self, watch_dir, event_path, filename):
+        self.copy_file_called = True
+        return super()._copy_file(watch_dir, event_path, filename)
+
+    def _process_event(self, watch_dir, event):
+        aft = self._run_archive_files(watch_dir, self.archive_file_queue)
+        super()._process_event(watch_dir, event, self.archive_file_queue)
+        self.process_events = False
         # Wait for thread to finish to ensure test suite is deterministic
-        aft = super()._archive_file(event_types, watch_dir, event_path, filename)
         if aft is not None:
             aft.join()
 
@@ -226,7 +237,7 @@ def test_process_event_no_perms_mask_no_alert_no_archive_file(monkeypatch, owwat
     patch_stat(monkeypatch, [0o700])
 
     owwatcher_object._process_event("/tmp", event)
-    assert not owwatcher_object.archive_file_called
+    assert not owwatcher_object.copy_file_called
 
 def test_process_event_perms_mask_no_alert_no_archive_file(monkeypatch, owwatcher_object):
     event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
@@ -234,7 +245,7 @@ def test_process_event_perms_mask_no_alert_no_archive_file(monkeypatch, owwatche
 
     owwatcher_object.perms_mask = 0o077
     owwatcher_object._process_event("/tmp", event)
-    assert not owwatcher_object.archive_file_called
+    assert not owwatcher_object.copy_file_called
 
 def test_process_event_archive_path_is_none(monkeypatch, owwatcher_object):
     event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
