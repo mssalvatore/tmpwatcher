@@ -148,6 +148,9 @@ class OWWatcher():
             self.logger.debug("No relevant event types found")
             return
 
+        # TODO: Create Alert class and return it from misnamed
+        # _evaluate_permissions() method. Queue file for archive before sending
+        # syslog alert.
         alert_sent = self._evaluate_permissions(watch_dir, event_path, filename, archive_file_queue)
         if alert_sent:
             archive_file_queue.put((event_types, event_path, filename))
