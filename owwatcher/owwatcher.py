@@ -2,6 +2,7 @@
 
 import inotify.adapters
 import inotify.constants as ic
+from .inotify_event_constants import InotifyEventConstants as iec
 import os
 from pathlib import Path
 import queue
@@ -30,16 +31,9 @@ PATH_TRAVERSAL_ERROR = "Attempting to archive %s may result in files being " \
 DEFAULT_OW_MASK = 0o002
 ARCHIVE_UMASK = 0o177
 
-IN_ATTRIB = "IN_ATTRIB"
-IN_CREATE = "IN_CREATE"
-IN_MOVED_TO = "IN_MOVED_TO"
-IN_CLOSE_WRITE = "IN_CLOSE_WRITE"
-IN_ISDIR = "IN_ISDIR"
-
-
 class OWWatcher():
     EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
-    INTERESTING_EVENTS = {IN_ATTRIB, IN_CREATE, IN_MOVED_TO, IN_CLOSE_WRITE}
+    INTERESTING_EVENTS = {iec.IN_ATTRIB, iec.IN_CREATE, iec.IN_MOVED_TO, iec.IN_CLOSE_WRITE}
 
     def __init__(self, perms_mask, archive_path, logger, syslog_logger, is_snap=False):
         self.process_events = True
@@ -272,7 +266,7 @@ class OWWatcher():
             self._copy_file(watch_dir, event_path, filename)
 
     def _event_is_archivable(self, event_types):
-        return ((IN_CLOSE_WRITE not in event_types) or (IN_ISDIR in event_types))
+        return ((iec.IN_CLOSE_WRITE not in event_types) or (iec.IN_ISDIR in event_types))
 
     def _copy_file(self, watch_dir, event_path, filename):
         try:

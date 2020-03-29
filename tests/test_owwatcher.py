@@ -1,4 +1,5 @@
 import collections
+from owwatcher import InotifyEventConstants as iec
 import logging
 import os
 from owwatcher import owwatcher
@@ -49,18 +50,18 @@ def owwatcher_object(monkeypatch):
     return OWWatcherTest(monkeypatch, None, None, null_logger, null_syslog_logger)
 
 def test_has_interesting_events_false(owwatcher_object):
-    interesting_events = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
-    received_events = ["IN_DELETE", "IN_ISDIR"]
+    interesting_events = {iec.IN_ATTRIB, iec.IN_CREATE, iec.IN_MOVED_TO}
+    received_events = [iec.IN_DELETE, iec.IN_ISDIR]
 
     assert not owwatcher_object._has_interesting_events(received_events, interesting_events)
 
 def test_has_interesting_events_true(owwatcher_object):
-    interesting_events = {"IN_ATTRIB", "IN_CREATE", "IN_MOVED_TO"}
+    interesting_events = {iec.IN_ATTRIB, iec.IN_CREATE, iec.IN_MOVED_TO}
 
-    received_events = ["IN_CREATE", "IN_ISDIR"]
+    received_events = [iec.IN_CREATE, iec.IN_ISDIR]
     assert owwatcher_object._has_interesting_events(received_events, interesting_events)
 
-    received_events = ["IN_MOVED_TO"]
+    received_events = [iec.IN_MOVED_TO]
     assert owwatcher_object._has_interesting_events(received_events, interesting_events)
 
 def mock_stat(stats):
@@ -111,14 +112,14 @@ def test_is_world_writable_false(monkeypatch, owwatcher_object):
     assert not owwatcher_object._is_world_writable(path, filename)
 
 def test_process_event_no_interesting(monkeypatch, owwatcher_object):
-    event = (None, ["IN_OPEN", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_OPEN, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object._process_event("/tmp", event)
     assert not owwatcher_object.syslog_logger.warning.called
 
 def test_process_event_ow_dir(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o002])
     monkeypatch.setattr(os.path, "isdir", lambda _: True)
 
@@ -127,7 +128,7 @@ def test_process_event_ow_dir(monkeypatch, owwatcher_object):
     owwatcher_object.syslog_logger.warning.assert_called_with("Found world writable directory: /tmp/random_dir_kljafl/a_dir")
 
 def test_process_event_ow_file(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o002])
     monkeypatch.setattr(os.path, "isdir", lambda _: False)
 
@@ -136,7 +137,7 @@ def test_process_event_ow_file(monkeypatch, owwatcher_object):
     owwatcher_object.syslog_logger.warning.assert_called_with("Found world writable file: /tmp/random_dir_kljafl/a_file")
 
 def test_process_event_perms_mask_file(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o750])
     monkeypatch.setattr(os.path, "isdir", lambda _: False)
 
@@ -146,7 +147,7 @@ def test_process_event_perms_mask_file(monkeypatch, owwatcher_object):
     owwatcher_object.syslog_logger.warning.assert_called_with("Found permissions matching mask 010 on file: /tmp/random_dir_kljafl/a_file")
 
 def test_process_event_perms_mask_directory(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o750])
     monkeypatch.setattr(os.path, "isdir", lambda _: True)
 
@@ -156,7 +157,7 @@ def test_process_event_perms_mask_directory(monkeypatch, owwatcher_object):
     owwatcher_object.syslog_logger.warning.assert_called_with("Found permissions matching mask 010 on directory: /tmp/random_dir_kljafl/a_dir")
 
 def test_process_event_mismatched_mask(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o722])
 
     owwatcher_object.perms_mask = 0o055
@@ -164,7 +165,7 @@ def test_process_event_mismatched_mask(monkeypatch, owwatcher_object):
     assert not owwatcher_object.syslog_logger.warning.called
 
 def test_process_event_empty_mask(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object.perms_mask = 0o000
@@ -175,7 +176,7 @@ def test_process_event_raise_fnf(monkeypatch, owwatcher_object):
     def raise_(x):
         raise x
 
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o777])
     monkeypatch.setattr(os, "stat", lambda _: raise_(FileNotFoundError()))
 
@@ -185,7 +186,7 @@ def test_process_event_raise_fnf(monkeypatch, owwatcher_object):
         assert False
 
 def test_process_event_ow_snap_path(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "%s/tmp/dir1/dir2" % owwatcher.SNAP_HOSTFS_PATH_PREFIX, "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "%s/tmp/dir1/dir2" % owwatcher.SNAP_HOSTFS_PATH_PREFIX, "a_file")
     patch_stat(monkeypatch, [0o002, 0o002])
     monkeypatch.setattr(os.path, "isdir", lambda _: False)
 
@@ -195,7 +196,7 @@ def test_process_event_ow_snap_path(monkeypatch, owwatcher_object):
     owwatcher_object.syslog_logger.warning.assert_called_with("Found world writable file: /tmp/dir1/dir2/a_file")
 
 def test_process_event_ow_snap_dir(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "%s/tmp" % owwatcher.SNAP_HOSTFS_PATH_PREFIX, "dir1")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "%s/tmp" % owwatcher.SNAP_HOSTFS_PATH_PREFIX, "dir1")
     patch_stat(monkeypatch, [0o002])
     monkeypatch.setattr(os.path, "isdir", lambda _: True)
 
@@ -205,7 +206,7 @@ def test_process_event_ow_snap_dir(monkeypatch, owwatcher_object):
     owwatcher_object.syslog_logger.warning.assert_called_with("Found world writable directory: /tmp/dir1")
 
 def test_process_event_directory_protects_ow_file(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o702, 0o702, 0o700])
     monkeypatch.setattr(os.path, "isdir", lambda _: False)
 
@@ -218,7 +219,7 @@ def test_process_event_directory_protects_ow_file(monkeypatch, owwatcher_object)
             "have improperly configured permissions")
 
 def test_process_event_directory_protects_ow_file_mask(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o720, 0o720, 0o700])
     monkeypatch.setattr(os.path, "isdir", lambda _: False)
 
@@ -233,14 +234,14 @@ def test_process_event_directory_protects_ow_file_mask(monkeypatch, owwatcher_ob
             "permissions")
 
 def test_process_event_no_perms_mask_no_alert_no_archive_file(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o700])
 
     owwatcher_object._process_event("/tmp", event)
     assert not owwatcher_object.copy_file_called
 
 def test_process_event_perms_mask_no_alert_no_archive_file(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o700])
 
     owwatcher_object.perms_mask = 0o077
@@ -248,14 +249,14 @@ def test_process_event_perms_mask_no_alert_no_archive_file(monkeypatch, owwatche
     assert not owwatcher_object.copy_file_called
 
 def test_process_event_archive_path_is_none(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object._process_event("/tmp", event)
     assert not shutil.copy2.called
 
 def test_process_event_no_close_write_event(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CREATE", "IN_DELETE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object.archive_path = "/fake/archive"
@@ -263,7 +264,7 @@ def test_process_event_no_close_write_event(monkeypatch, owwatcher_object):
     assert not shutil.copy2.called
 
 def test_process_event_is_dir(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE", "IN_ISDIR"], "/tmp/dir1/dir2", "a_dir")
+    event = (None, [iec.IN_CLOSE_WRITE, iec.IN_ISDIR], "/tmp/dir1/dir2", "a_dir")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object.archive_path = "/fake/archive"
@@ -271,7 +272,7 @@ def test_process_event_is_dir(monkeypatch, owwatcher_object):
     assert not shutil.copy2.called
 
 def test_process_event_real_file_path_traversal(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
     os.path.realpath.side_effect = ["/home/user/a_file", "/fake/archive"]
 
@@ -285,7 +286,7 @@ def test_process_event_real_file_path_traversal(monkeypatch, owwatcher_object):
             "or extremely unorthodox")
 
 def test_process_event_real_copy_path_traversal(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
     os.path.realpath.side_effect = ["/tmp/dir1/dir2/a_file", "/different/fake/archive/a_file"]
 
@@ -299,7 +300,7 @@ def test_process_event_real_copy_path_traversal(monkeypatch, owwatcher_object):
             "or extremely unorthodox")
 
 def test_process_event_real_copy_path_traversal(monkeypatch, owwatcher_object):
-    event = (None, ["IN_CLOSE_WRITE"], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
     os.path.realpath.side_effect = ["/tmp/dir1/dir2/a_file", "/fake/archive/a_file"]
     monkeypatch.setattr(time, "time", lambda: 111.111111)
