@@ -53,7 +53,7 @@ class OWWatcher():
         os.umask(ARCHIVE_UMASK)
 
     def __del__(self):
-        self.process_events = False
+        self.stop()
 
     def run(self, dirs, recursive):
         for d in dirs:
