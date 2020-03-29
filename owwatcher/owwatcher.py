@@ -148,12 +148,9 @@ class OWWatcher():
             self.logger.debug("No relevant event types found")
             return
 
-        # TODO: Create Alert class and return it from misnamed
-        # _evaluate_permissions() method. Queue file for archive before sending
-        # syslog alert.
-        alert_sent = self._evaluate_permissions(watch_dir, event_path, filename)
-        if alert_sent:
+        if self._should_send_alert(watch_dir, event_path, filename):
             archive_file_queue.put((event_types, event_path, filename))
+            self._send_alert(watch_dir, event_path, filename)
 
     def _log_received_event_debug_msg(self, event_path, filename, event_types):
         if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
@@ -167,18 +164,11 @@ class OWWatcher():
         # know there was at least one interesting event.
         return len(interesting_events.intersection(set(event_types))) > 0
 
-    def _evaluate_permissions(self, watch_dir, event_path, filename):
+    def _should_send_alert(self, watch_dir, event_path, filename):
         if self.perms_mask is None:
-            if self._is_world_writable(event_path, filename):
-                self.logger.info("Found world writable file/directory. Sending alert.")
-                self._send_ow_alert(watch_dir, event_path, filename)
-                return True
-        elif self._check_perms_mask(event_path, filename):
-            self.logger.info("Found file matching the permissions mask. Sending alert.")
-            self._send_perms_mask_alert(watch_dir, event_path, filename)
-            return True
+            return self._is_world_writable(event_path, filename)
 
-        return False
+        return self._check_perms_mask(event_path, filename)
 
     def _is_world_writable(self, path, filename):
         self.logger.debug("Checking if file %s at path %s is world writable" % (filename, path))
@@ -200,6 +190,15 @@ class OWWatcher():
         except (FileNotFoundError)as fnf:
             self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
             return False
+
+    def _send_alert(self, watch_dir, event_path, filename):
+        # TODO: Send alerts on separate thread.
+        if self.perms_mask is None:
+            self.logger.info("Found world writable file/directory. Sending alert.")
+            self._send_ow_alert(watch_dir, event_path, filename)
+        else:
+            self.logger.info("Found file matching the permissions mask. Sending alert.")
+            self._send_perms_mask_alert(watch_dir, event_path, filename)
 
     def _send_ow_alert(self, watch_dir, path, filename):
         self._send_syslog_perms_alert(watch_dir, path, filename, "Found world writable")
