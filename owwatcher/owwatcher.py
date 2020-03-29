@@ -63,9 +63,7 @@ class OWWatcher():
 
     def run(self, dirs, recursive):
         for d in dirs:
-            # Use LIFO queue, because copying anything is better than trying to copy
-            # everything and ending up with nothing.
-            self._run_watcher_thread(d, recursive, LifoQueue())
+            self._run_watcher_thread(d, recursive)
 
         # TODO: Daemon threads are used because the threads are often blocked
         # waiting on inotify events. Find a non-blocking inotify solution to remove
@@ -74,16 +72,16 @@ class OWWatcher():
         while self.process_events:
             time.sleep(1)
 
-    def _run_watcher_thread(self, d, recursive, archive_file_queue):
+    def _run_watcher_thread(self, d, recursive):
         owwatcher_thread = threading.Thread(target=self._watch_for_world_writable_files,
-                                            args=(d, recursive, archive_file_queue,),
+                                            args=(d, recursive),
                                             daemon=True)
         owwatcher_thread.start()
 
     def stop(self):
         self.process_events = False
 
-    def _watch_for_world_writable_files(self, watch_dir, recursive, archive_file_queue):
+    def _watch_for_world_writable_files(self, watch_dir, recursive):
         self.logger.info("Setting up inotify watches on %s and its subdirectories" % watch_dir)
 
         if self.is_snap:
@@ -93,6 +91,9 @@ class OWWatcher():
                     " running as a snap. Actual inotify watch set up on"\
                     " dir %s" % watch_dir)
 
+        # Use LIFO queue, because copying anything is better than trying to copy
+        # everything and ending up with nothing.
+        archive_file_queue = LifoQueue()
         self._run_archive_files(watch_dir, archive_file_queue)
 
         while True:
