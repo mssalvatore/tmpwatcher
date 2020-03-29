@@ -151,7 +151,7 @@ class OWWatcher():
         # TODO: Create Alert class and return it from misnamed
         # _evaluate_permissions() method. Queue file for archive before sending
         # syslog alert.
-        alert_sent = self._evaluate_permissions(watch_dir, event_path, filename, archive_file_queue)
+        alert_sent = self._evaluate_permissions(watch_dir, event_path, filename)
         if alert_sent:
             archive_file_queue.put((event_types, event_path, filename))
 
@@ -167,7 +167,7 @@ class OWWatcher():
         # know there was at least one interesting event.
         return len(interesting_events.intersection(set(event_types))) > 0
 
-    def _evaluate_permissions(self, watch_dir, event_path, filename, archive_file_queue):
+    def _evaluate_permissions(self, watch_dir, event_path, filename):
         if self.perms_mask is None:
             if self._is_world_writable(event_path, filename):
                 self.logger.info("Found world writable file/directory. Sending alert.")
