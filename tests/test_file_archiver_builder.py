@@ -16,7 +16,7 @@ def test_archive_path(null_logger):
 
     assert fa.archive_path == archive_path
 
-def test_watch_dir():
+def test_watch_dir(null_logger):
     archive_path = "/tmp/archive"
     watch_dir = "/tmp/watch_dir"
     fab = file_archiver_builder.FileArchiverBuilder(null_logger, archive_path)
@@ -24,7 +24,7 @@ def test_watch_dir():
 
     assert fa.watch_dir == watch_dir
 
-def test_queue_not_none():
+def test_queue_not_none(null_logger):
     archive_path = "/tmp/archive"
     watch_dir = "/tmp/watch_dir"
     fab = file_archiver_builder.FileArchiverBuilder(null_logger, archive_path)
