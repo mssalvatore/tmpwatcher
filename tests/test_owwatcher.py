@@ -1,4 +1,5 @@
 import collections
+from owwatcher import file_archiver_builder
 from owwatcher import InotifyEventConstants as iec
 import logging
 import os
@@ -9,35 +10,23 @@ import shutil
 import time
 from unittest.mock import MagicMock
 
-class OWWatcherTest(owwatcher.OWWatcher):
+class MockFileArchiverBuilder(file_archiver_builder.FileArchiverBuilder):
+    def __init__(self):
+        pass
 
-    def __init__(self, monkeypatch, perms_mask, archive_path, logger, syslog_logger, is_snap=False):
-        super().__init__(perms_mask, archive_path, logger, syslog_logger, is_snap=False)
+    def build_file_archiver(self, watch_dir):
+        return MagicMock()
+
+class OWWatcherTest(owwatcher.OWWatcher):
+    def __init__(self, monkeypatch, perms_mask, logger, syslog_logger, is_snap=False):
+        super().__init__(perms_mask, MockFileArchiverBuilder(), logger, syslog_logger, is_snap=False)
         self.archive_queue_timeout_sec = .01
 
         syslog_logger.warning = MagicMock()
         syslog_logger.info = MagicMock()
 
-        logger.error = MagicMock()
-
-        self.copy_file_called = False
-
-        shutil.copy2 = MagicMock()
-        os.path.realpath = MagicMock()
-
-        self.archive_file_queue = LifoQueue()
-
-    def _copy_file(self, watch_dir, event_path, filename):
-        self.copy_file_called = True
-        return super()._copy_file(watch_dir, event_path, filename)
-
     def _process_event(self, watch_dir, event):
-        aft = self._run_archive_files(watch_dir, self.archive_file_queue)
-        super()._process_event(watch_dir, event, self.archive_file_queue)
-        self.process_events = False
-        # Wait for thread to finish to ensure test suite is deterministic
-        if aft is not None:
-            aft.join()
+        super()._process_event(watch_dir, event, self._get_new_file_archiver(watch_dir))
 
 @pytest.fixture
 def owwatcher_object(monkeypatch):
@@ -47,7 +36,7 @@ def owwatcher_object(monkeypatch):
     null_syslog_logger = logging.getLogger('owwatcher.null-syslog')
     null_syslog_logger.addHandler(logging.NullHandler)
 
-    return OWWatcherTest(monkeypatch, None, None, null_logger, null_syslog_logger)
+    return OWWatcherTest(monkeypatch, None, null_logger, null_syslog_logger)
 
 def test_has_interesting_events_false(owwatcher_object):
     interesting_events = {iec.IN_ATTRIB, iec.IN_CREATE, iec.IN_MOVED_TO}
@@ -238,74 +227,13 @@ def test_process_event_no_perms_mask_no_alert_no_archive_file(monkeypatch, owwat
     patch_stat(monkeypatch, [0o700])
 
     owwatcher_object._process_event("/tmp", event)
-    assert not owwatcher_object.copy_file_called
-
-def test_process_event_perms_mask_no_alert_no_archive_file(monkeypatch, owwatcher_object):
-    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o700])
-
-    owwatcher_object.perms_mask = 0o077
-    owwatcher_object._process_event("/tmp", event)
-    assert not owwatcher_object.copy_file_called
-
-def test_process_event_archive_path_is_none(monkeypatch, owwatcher_object):
-    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o777])
-
-    owwatcher_object._process_event("/tmp", event)
-    assert not shutil.copy2.called
+    assert len(owwatcher_object.file_archivers) == 1
+    assert not owwatcher_object.file_archivers[0].add_event_to_archive_file_queue.called
 
 def test_process_event_no_close_write_event(monkeypatch, owwatcher_object):
     event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
 
-    owwatcher_object.archive_path = "/fake/archive"
     owwatcher_object._process_event("/tmp", event)
-    assert not shutil.copy2.called
-
-def test_process_event_is_dir(monkeypatch, owwatcher_object):
-    event = (None, [iec.IN_CLOSE_WRITE, iec.IN_ISDIR], "/tmp/dir1/dir2", "a_dir")
-    patch_stat(monkeypatch, [0o777])
-
-    owwatcher_object.archive_path = "/fake/archive"
-    owwatcher_object._process_event("/tmp", event)
-    assert not shutil.copy2.called
-
-def test_process_event_real_file_path_traversal(monkeypatch, owwatcher_object):
-    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o777])
-    os.path.realpath.side_effect = ["/home/user/a_file", "/fake/archive"]
-
-    owwatcher_object.archive_path = "/fake/archive"
-    owwatcher_object._process_event("/tmp", event)
-    assert not shutil.copy2.called
-    assert owwatcher_object.logger.error.called
-    owwatcher_object.logger.error.assert_called_with("Attempting to archive " \
-            "/tmp/dir1/dir2/a_file may result in files being written outside " \
-            "of the archive path. Someone may be attempting something nasty " \
-            "or extremely unorthodox")
-
-def test_process_event_real_copy_path_traversal(monkeypatch, owwatcher_object):
-    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o777])
-    os.path.realpath.side_effect = ["/tmp/dir1/dir2/a_file", "/different/fake/archive/a_file"]
-
-    owwatcher_object.archive_path = "/fake/archive"
-    owwatcher_object._process_event("/tmp", event)
-    assert not shutil.copy2.called
-    assert owwatcher_object.logger.error.called
-    owwatcher_object.logger.error.assert_called_with("Attempting to archive " \
-            "/tmp/dir1/dir2/a_file may result in files being written outside " \
-            "of the archive path. Someone may be attempting something nasty " \
-            "or extremely unorthodox")
-
-def test_process_event_real_copy_path_traversal(monkeypatch, owwatcher_object):
-    event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o777])
-    os.path.realpath.side_effect = ["/tmp/dir1/dir2/a_file", "/fake/archive/a_file"]
-    monkeypatch.setattr(time, "time", lambda: 111.111111)
-
-    owwatcher_object.archive_path = "/fake/archive"
-    owwatcher_object._process_event("/tmp", event)
-    assert shutil.copy2.called
-    shutil.copy2.assert_called_with("/tmp/dir1/dir2/a_file", "/fake/archive/a_file.111.111111", follow_symlinks=False)
+    assert len(owwatcher_object.file_archivers) == 1
+    assert owwatcher_object.file_archivers[0].add_event_to_archive_file_queue.called

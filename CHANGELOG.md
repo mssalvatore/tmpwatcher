@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - File archive performance: Add files to the archive queue before syslog alerts
   are sent to increase the probability that the file still exists when the
   archive thread attemps to archive it.
+- Refactored file archive functionality out of OWWatcher and into new
+  FileArchiver class.
 
 ## [2.0.0] - 2020-02-24
 ### Added

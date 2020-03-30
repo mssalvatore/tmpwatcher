@@ -3,6 +3,7 @@
 import argparse
 import collections
 import configparser
+from .file_archiver_builder import FileArchiverBuilder
 from .options import Options
 import os
 from .owwatcher_logger_configurer import OWWatcherLoggerConfigurer
@@ -30,8 +31,9 @@ def main():
         options = Options(args, is_snap)
         logger_configurer = OWWatcherLoggerConfigurer(options)
         configure_logging(options, logger_configurer)
-        _OWWATCHER = OWWatcher(options.perms_mask, options.archive_path,
-                               _LOGGER, _SYSLOG_LOGGER, is_snap)
+        fab = FileArchiverBuilder(_LOGGER, options.archive_path)
+        _OWWATCHER = OWWatcher(options.perms_mask, fab, _LOGGER,
+                               _SYSLOG_LOGGER,is_snap)
 
         register_signal_handlers()
     except Exception as ex:
