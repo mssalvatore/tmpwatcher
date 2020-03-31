@@ -18,7 +18,7 @@ class FileArchiver():
         self.archive_queue_timeout_sec = archive_queue_timeout_sec
 
     def run(self):
-        self.process_events = True
+        self.try_read_queue = True
         archive_thread = threading.Thread(target=self._archive_files,
                 args=(), daemon=True)
         archive_thread.start()
@@ -27,13 +27,13 @@ class FileArchiver():
         return archive_thread
 
     def stop(self):
-        self.process_events = False
+        self.try_read_queue = False
 
     def add_event_to_archive_file_queue(self, event_types, event_path, filename):
         self.archive_queue.put((event_types, event_path, filename))
 
     def _archive_files(self):
-        while self.process_events:
+        while self.try_read_queue:
             try:
                 (event_types, event_path, filename) = \
                     self.archive_queue.get(block=True, timeout=self.archive_queue_timeout_sec)
