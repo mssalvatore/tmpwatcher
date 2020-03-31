@@ -101,16 +101,7 @@ def test_process_event_no_interesting(monkeypatch, owwatcher_object):
     owwatcher_object._process_event(watch_dir, event)
     assert not owwatcher_object.alerter.add_event_to_alert_queue.called
 
-def test_process_event_ow_dir(monkeypatch, owwatcher_object):
-    watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
-    patch_stat(monkeypatch, [0o002])
-
-    owwatcher_object._process_event(watch_dir, event)
-    assert owwatcher_object.alerter.add_event_to_alert_queue.called
-    owwatcher_object.alerter.add_event_to_alert_queue.assert_called_with(watch_dir, event[2], event[3])
-
-def test_process_event_ow_file(monkeypatch, owwatcher_object):
+def test_process_event_ow(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
     event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o002])
@@ -119,19 +110,9 @@ def test_process_event_ow_file(monkeypatch, owwatcher_object):
     assert owwatcher_object.alerter.add_event_to_alert_queue.called
     owwatcher_object.alerter.add_event_to_alert_queue.assert_called_with(watch_dir, event[2], event[3])
 
-def test_process_event_perms_mask_file(monkeypatch, owwatcher_object):
+def test_process_event_perms_mask(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
     event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
-    patch_stat(monkeypatch, [0o750])
-
-    owwatcher_object.perms_mask = 0o010
-    owwatcher_object._process_event(watch_dir, event)
-    assert owwatcher_object.alerter.add_event_to_alert_queue.called
-    owwatcher_object.alerter.add_event_to_alert_queue.assert_called_with(watch_dir, event[2], event[3])
-
-def test_process_event_perms_mask_directory(monkeypatch, owwatcher_object):
-    watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
     patch_stat(monkeypatch, [0o750])
 
     owwatcher_object.perms_mask = 0o010
@@ -141,7 +122,7 @@ def test_process_event_perms_mask_directory(monkeypatch, owwatcher_object):
 
 def test_process_event_mismatched_mask(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o722])
 
     owwatcher_object.perms_mask = 0o055
@@ -150,7 +131,7 @@ def test_process_event_mismatched_mask(monkeypatch, owwatcher_object):
 
 def test_process_event_empty_mask(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object.perms_mask = 0o000
@@ -162,7 +143,7 @@ def test_process_event_raise_fnf(monkeypatch, owwatcher_object):
     def raise_(x):
         raise x
 
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_dir")
+    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o777])
     monkeypatch.setattr(os, "stat", lambda _: raise_(FileNotFoundError()))
 
@@ -191,26 +172,7 @@ def test_process_event_ow_snap_dir(monkeypatch, owwatcher_object):
     assert owwatcher_object.alerter.add_event_to_alert_queue.called
     owwatcher_object.alerter.add_event_to_alert_queue.assert_called_with(watch_dir, event[2], event[3])
 
-def test_process_event_directory_protects_ow_file(monkeypatch, owwatcher_object):
-    watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o702, 0o702, 0o700])
-
-    owwatcher_object._process_event(watch_dir, event)
-    assert owwatcher_object.alerter.add_event_to_alert_queue.called
-    owwatcher_object.alerter.add_event_to_alert_queue.assert_called_with(watch_dir, event[2], event[3])
-
-def test_process_event_directory_protects_ow_file_mask(monkeypatch, owwatcher_object):
-    watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
-    patch_stat(monkeypatch, [0o720, 0o720, 0o700])
-
-    owwatcher_object.perms_mask = 0o077
-    owwatcher_object._process_event(watch_dir, event)
-    assert owwatcher_object.alerter.add_event_to_alert_queue.called
-    owwatcher_object.alerter.add_event_to_alert_queue.assert_called_with(watch_dir, event[2], event[3])
-
-def test_process_event_no_perms_mask_no_alert_no_archive_file(monkeypatch, owwatcher_object):
+def test_process_event_default_perms_mask_no_archive_file(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
     event = (None, [iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o700])
@@ -219,9 +181,9 @@ def test_process_event_no_perms_mask_no_alert_no_archive_file(monkeypatch, owwat
     assert len(owwatcher_object.file_archivers) == 1
     assert not owwatcher_object.file_archivers[0].add_event_to_archive_file_queue.called
 
-def test_process_event_no_close_write_event(monkeypatch, owwatcher_object):
+def test_process_event_archives_file(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
-    event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/dir1/dir2", "a_file")
+    event = (None, [iec.IN_CREATE, iec.IN_CLOSE_WRITE], "/tmp/dir1/dir2", "a_file")
     patch_stat(monkeypatch, [0o777])
 
     owwatcher_object._process_event(watch_dir, event)
