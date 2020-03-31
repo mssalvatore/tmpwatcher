@@ -63,6 +63,13 @@ def patch_stat(monkeypatch, modes):
     stats = map(lambda mode: Stat(st_mode=mode), modes)
     monkeypatch.setattr(os, "stat", lambda _: lambda_mock_stat(_, stats))
 
+def test_umask(monkeypatch, fa):
+    # For some reason in python you can't check the umask without setting it.
+    current_mask = os.umask(0o777)
+    os.umask(current_mask)
+
+    assert current_mask == 0o177
+
 def test_archive_path_is_none(monkeypatch, fa):
     patch_stat(monkeypatch, [0o777])
     fa.archive_path = None

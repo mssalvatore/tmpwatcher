@@ -24,7 +24,6 @@ PATH_TRAVERSAL_ERROR = "Attempting to archive %s may result in files being " \
                        "written outside of the archive path. Someone may be " \
                        "attempting something nasty or extremely unorthodox"
 DEFAULT_OW_MASK = 0o002
-ARCHIVE_UMASK = 0o177
 
 class OWWatcher():
     EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
@@ -38,14 +37,6 @@ class OWWatcher():
         self.logger = logger
         self.syslog_logger = syslog_logger
         self.is_snap = is_snap
-
-        # SECURITY: Set the umask so that archived files do not have go+rwx or
-        # u+x permissions. Prevents files which may be malicious and placed in
-        # /tmp by an attacker from being accidentally executed from the archive
-        # directory. It also prevents the contents of archive_path from being
-        # read by an attacker. If, for some reason, archive_path's permissions
-        # are not strict enough.
-        os.umask(ARCHIVE_UMASK)
 
     def __del__(self):
         self.stop()

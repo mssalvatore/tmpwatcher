@@ -5,6 +5,7 @@ import shutil
 import threading
 import time
 
+ARCHIVE_UMASK = 0o177
 PATH_TRAVERSAL_ERROR = "Attempting to archive %s may result in files being " \
                        "written outside of the archive path. Someone may be " \
                        "attempting something nasty or extremely unorthodox"
@@ -16,6 +17,14 @@ class FileArchiver():
         self.watch_dir = watch_dir
         self.archive_queue = archive_queue
         self.archive_queue_timeout_sec = archive_queue_timeout_sec
+
+        # SECURITY: Set the umask so that archived files do not have go+rwx or
+        # u+x permissions. Prevents files which may be malicious and placed in
+        # /tmp by an attacker from being accidentally executed from the archive
+        # directory. It also prevents the contents of archive_path from being
+        # read by an attacker. If, for some reason, archive_path's permissions
+        # are not strict enough.
+        os.umask(ARCHIVE_UMASK)
 
     def run(self):
         self.try_read_queue = True
