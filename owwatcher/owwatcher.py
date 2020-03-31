@@ -29,13 +29,13 @@ class OWWatcher():
     EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
     INTERESTING_EVENTS = {iec.IN_ATTRIB, iec.IN_CREATE, iec.IN_MOVED_TO, iec.IN_CLOSE_WRITE}
 
-    def __init__(self, perms_mask, file_archiver_builder, logger, syslog_logger, is_snap=False):
+    def __init__(self, perms_mask, file_archiver_builder, logger, alerter, is_snap=False):
         self.process_events = True
         self.perms_mask = perms_mask
         self.file_archiver_builder = file_archiver_builder
         self.file_archivers = list()
         self.logger = logger
-        self.syslog_logger = syslog_logger
+        self.alerter = alerter
         self.is_snap = is_snap
 
     def __del__(self):
@@ -130,7 +130,7 @@ class OWWatcher():
 
         if self._should_send_alert(watch_dir, event_path, filename):
             file_archiver.add_event_to_archive_file_queue(event_types, event_path, filename)
-            self._send_alert(watch_dir, event_path, filename)
+            self.alerter.add_event_to_alert_queue(watch_dir, event_path, filename)
 
     def _log_received_event_debug_msg(self, event_path, filename, event_types):
         if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
@@ -170,62 +170,3 @@ class OWWatcher():
         except (FileNotFoundError)as fnf:
             self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
             return False
-
-    def _send_alert(self, watch_dir, event_path, filename):
-        # TODO: Send alerts on separate thread.
-        if self.perms_mask is None:
-            self.logger.info("Found world writable file/directory. Sending alert.")
-            self._send_ow_alert(watch_dir, event_path, filename)
-        else:
-            self.logger.info("Found file matching the permissions mask. Sending alert.")
-            self._send_perms_mask_alert(watch_dir, event_path, filename)
-
-    def _send_ow_alert(self, watch_dir, path, filename):
-        self._send_syslog_perms_alert(watch_dir, path, filename, "Found world writable")
-
-    def _send_perms_mask_alert(self, watch_dir, path, filename):
-        msg = "Found permissions matching mask %s on" % "{:03o}".format(self.perms_mask)
-        self._send_syslog_perms_alert(watch_dir, path, filename, msg)
-
-    def _send_syslog_perms_alert(self, watch_dir, path, filename, msg):
-        (full_path, event_path) = self._strip_snap_prefix_from_event_path(path, filename)
-
-        file_or_dir = "directory" if os.path.isdir(full_path) else "file"
-        msg = "%s %s: %s" % (msg, file_or_dir, event_path)
-
-        mask = DEFAULT_OW_MASK
-        if self.perms_mask is not None:
-            mask = self.perms_mask
-
-        if not self.all_dirs_in_path_match_mask(watch_dir, path, mask):
-            msg = msg + VULNERABILITY_MITIGATED_MSG
-            self.logger.info(msg)
-            self.syslog_logger.info(msg)
-        else:
-            self.logger.warning(msg)
-            self.syslog_logger.warning(msg)
-
-    def _strip_snap_prefix_from_event_path(self, path, filename):
-        full_path = os.path.join(path, filename)
-
-        event_path = full_path
-        if self.is_snap and event_path.startswith(SNAP_HOSTFS_PATH_PREFIX):
-            event_path = event_path[len(SNAP_HOSTFS_PATH_PREFIX):]
-
-        return (full_path, event_path)
-
-    def all_dirs_in_path_match_mask(self, watch_dir, path, mask):
-        if path.rstrip('/') == watch_dir.rstrip('/') :
-            return True
-
-        try:
-            self.logger.debug("Checking permissions of %s against mask %s" % (path, "{:03o}".format(mask)))
-            status = os.stat(path)
-
-            if status.st_mode & mask:
-                return self.all_dirs_in_path_match_mask(watch_dir, str(Path(path).parent), mask)
-            else:
-                return False
-        except (FileNotFoundError)as fnf:
-            self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
-            return True

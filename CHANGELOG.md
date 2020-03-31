@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   archive thread attemps to archive it.
 - Refactored file archive functionality out of OWWatcher and into new
   FileArchiver class.
+- Syslog alert performance: Run thread for sending syslog alerts so that the
+  main thread can get back to processing syslog alerts.
+- Refactored alerting functionality out of OWWatcher and into new SyslogAlerter
+  class.
 
 ## [2.0.0] - 2020-02-24
 ### Added
