@@ -128,7 +128,7 @@ class OWWatcher():
             self.logger.debug("No relevant event types found")
             return
 
-        if self._should_send_alert(watch_dir, event_path, filename):
+        if self._should_send_alert(event_path, filename):
             file_archiver.add_event_to_archive_file_queue(event_types, event_path, filename)
             self.alerter.add_event_to_alert_queue(watch_dir, event_path, filename)
 
@@ -144,29 +144,15 @@ class OWWatcher():
         # know there was at least one interesting event.
         return len(interesting_events.intersection(set(event_types))) > 0
 
-    def _should_send_alert(self, watch_dir, event_path, filename):
-        if self.perms_mask is None:
-            return self._is_world_writable(event_path, filename)
-
-        return self._check_perms_mask(event_path, filename)
-
-    def _is_world_writable(self, path, filename):
-        self.logger.debug("Checking if file %s at path %s is world writable" % (filename, path))
-        return self._check_perms(path, filename, DEFAULT_OW_MASK)
-
-    def _check_perms_mask(self, path, filename):
-        self.logger.debug("Checking file %s at path %s against the configured permissions mask" % (filename, path))
-        return self._check_perms(path, filename, self.perms_mask)
-
-    def _check_perms(self, path, filename, mask):
+    def _should_send_alert(self, event_path, filename):
         try:
-            full_path = os.path.join(path, filename)
-            self.logger.debug("Checking permissions of %s against mask %s" % (full_path, "{:03o}".format(mask)))
+            full_path = os.path.join(event_path, filename)
+            self.logger.debug("Checking permissions of %s against mask %s" % (full_path, "{:03o}".format(self.perms_mask)))
 
             status = os.stat(full_path)
             self.logger.debug("Permissions of %s are %s" % (full_path, "{:03o}".format(status.st_mode)))
 
-            return status.st_mode & mask
+            return status.st_mode & self.perms_mask
         except (FileNotFoundError)as fnf:
             self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
             return False

@@ -29,7 +29,7 @@ def owwatcher_object(monkeypatch):
     null_logger = logging.getLogger('owwatcher.null')
     null_logger.addHandler(logging.NullHandler())
 
-    return OWWatcherTest(monkeypatch, None, null_logger)
+    return OWWatcherTest(monkeypatch, 0o002, null_logger)
 
 def test_has_interesting_events_false(owwatcher_object):
     interesting_events = {iec.IN_ATTRIB, iec.IN_CREATE, iec.IN_MOVED_TO}
@@ -61,37 +61,37 @@ def patch_stat(monkeypatch, modes):
     stats = map(lambda mode: Stat(st_mode=mode), modes)
     monkeypatch.setattr(os, "stat", lambda _: lambda_mock_stat(_, stats))
 
-def test_is_world_writable_true(monkeypatch, owwatcher_object):
+def test_should_send_alert_true(monkeypatch, owwatcher_object):
     path = "/tmp/random_dir_kljafl"
     filename = "test_file"
 
     patch_stat(monkeypatch, [0o006])
-    assert owwatcher_object._is_world_writable(path, filename)
+    assert owwatcher_object._should_send_alert(path, filename)
 
     patch_stat(monkeypatch, [0o777])
-    assert owwatcher_object._is_world_writable(path, filename)
+    assert owwatcher_object._should_send_alert(path, filename)
 
     patch_stat(monkeypatch, [0o002])
-    assert owwatcher_object._is_world_writable(path, filename)
+    assert owwatcher_object._should_send_alert(path, filename)
 
     patch_stat(monkeypatch, [0o666])
-    assert owwatcher_object._is_world_writable(path, filename)
+    assert owwatcher_object._should_send_alert(path, filename)
 
-def test_is_world_writable_false(monkeypatch, owwatcher_object):
+def test_should_send_alert_false(monkeypatch, owwatcher_object):
     path = "/tmp/random_dir_kljafl"
     filename = "test_file"
 
     patch_stat(monkeypatch, [0o004])
-    assert not owwatcher_object._is_world_writable(path, filename)
+    assert not owwatcher_object._should_send_alert(path, filename)
 
     patch_stat(monkeypatch, [0o770])
-    assert not owwatcher_object._is_world_writable(path, filename)
+    assert not owwatcher_object._should_send_alert(path, filename)
 
     patch_stat(monkeypatch, [0o641])
-    assert not owwatcher_object._is_world_writable(path, filename)
+    assert not owwatcher_object._should_send_alert(path, filename)
 
     patch_stat(monkeypatch, [0o665])
-    assert not owwatcher_object._is_world_writable(path, filename)
+    assert not owwatcher_object._should_send_alert(path, filename)
 
 def test_process_event_no_interesting(monkeypatch, owwatcher_object):
     watch_dir = "/tmp"
