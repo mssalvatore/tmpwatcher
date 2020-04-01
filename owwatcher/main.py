@@ -3,12 +3,14 @@
 import argparse
 import collections
 import configparser
+from .file_archiver_builder import FileArchiverBuilder
 from .options import Options
 import os
 from .owwatcher_logger_configurer import OWWatcherLoggerConfigurer
 from .owwatcher import OWWatcher
 import signal
 import sys
+from .syslog_alerter import SyslogAlerter
 
 # Creating null loggers allows pytest test suite to run as logging is not
 # necessarily configured for each unit test run.
@@ -30,8 +32,14 @@ def main():
         options = Options(args, is_snap)
         logger_configurer = OWWatcherLoggerConfigurer(options)
         configure_logging(options, logger_configurer)
-        _OWWATCHER = OWWatcher(options.perms_mask, options.archive_path,
-                               _LOGGER, _SYSLOG_LOGGER, is_snap)
+        fab = FileArchiverBuilder(_LOGGER, options.archive_path)
+        # TODO: Handle perms_mask default in Options instead of here
+        if options.perms_mask is None:
+            options.perms_mask = 0o002
+        syslog_alerter = SyslogAlerter(options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap=is_snap)
+        syslog_alerter.run()
+        _OWWATCHER = OWWatcher(options.perms_mask, fab, _LOGGER,
+                               syslog_alerter, is_snap=is_snap)
 
         register_signal_handlers()
     except Exception as ex:

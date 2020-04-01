@@ -8,7 +8,7 @@ os.umask(0o022)
 
 setuptools.setup(
     name="owwatcher",
-    version="2.0.0",
+    version="2.1.0",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
     description="Detects when world-writable directories or files are " \
