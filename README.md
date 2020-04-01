@@ -220,9 +220,9 @@ A test coverage report can be viewed by pointing your browser at
    permissions on the file or directory match the mask. It would be useful if
    the syslog alert reported the permissions of the offending file/directory.
 
-1. Sometimes rsyslog shows the same messages more than once, even though they
-   were only sent once. I've yet to determine whether or not this is the fault
-   of this tool, the python syslog handler, or rsyslog itself.
-
 1. It may be acceptable for some files to be world writable. A whitelist
    capability to prevent unnecessary alerts would reduce false positives.
+
+1. It would be nice if OWWatcher had an option that told it to scan the whole
+   system for directories with 0777 permissions and monitor them, rather than
+   having the user specify each directory.
