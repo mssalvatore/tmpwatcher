@@ -49,6 +49,7 @@ class FileArchiver():
             except queue.Empty:
                 continue
 
+            # TODO: This should never happen. Raise TypeError in constructor instead.
             if self.archive_path is None:
                 continue
 
@@ -60,6 +61,7 @@ class FileArchiver():
             self.logger.debug("Archiving file %s/%s" % (self.watch_dir, filename))
             self._copy_file(event_path, filename)
 
+    # TODO: Archiver really shouldn't be making this decision. Put this somewhere else.
     def _event_is_archivable(self, event_types):
         return ((iec.IN_CLOSE_WRITE not in event_types) or (iec.IN_ISDIR in event_types))
 
