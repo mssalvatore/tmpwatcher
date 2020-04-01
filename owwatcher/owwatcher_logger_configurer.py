@@ -84,7 +84,7 @@ class OWWatcherLoggerConfigurer:
         # otherwise some log messages may be duplicated as self.syslog_logger
         # will inherit self.owwatcher_logger's handlers
         self.syslog_logger = logging.getLogger('owwatcher.syslog')
-        log_formatter = logging.Formatter("%(hostname)s - %(module)s - %(levelname)s - %(message)s")
+        log_formatter = logging.Formatter("%(hostname)s - owwatcher - %(levelname)s - %(message)s")
 
         socket_type = OWWatcherLoggerConfigurer._get_socket_type_from_protocol_name(protocol)
         syslog_handler = logging.handlers.SysLogHandler(
