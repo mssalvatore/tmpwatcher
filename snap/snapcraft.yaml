@@ -26,15 +26,13 @@ parts:
         python-version: python3
         source: .
 
+plugs:
+    network: null
+    system-backup: null
+
 apps:
     owwatcher:
         command: bin/owwatcher
-        plugs:
-            - network
-            - system-backup
     owwatcherd:
         command: bin/owwatcher -c /var/snap/owwatcher/current/owwatcher.conf
-        plugs:
-            - network
-            - system-backup
         daemon: simple

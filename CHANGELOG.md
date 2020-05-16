@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+### Changed
+- Removed duplicate plugs in snapcraft.yaml.
+
 ## [2.1.0] - 2020-04-01
 ### Changed
 - File archive performance: Run a thread for archiving files, rather than
