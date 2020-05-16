@@ -1,5 +1,7 @@
 # OWWatcher
 
+[![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
+
 OWWatcher detects when world-writable directories or files are created in a
 user-specified directory. This is useful for passively discovering information
 disclosure, symlink race, or TOCTOU vulnerabilities.
