@@ -24,7 +24,10 @@ class FileArchiver():
         # directory. It also prevents the contents of archive_path from being
         # read by an attacker. If, for some reason, archive_path's permissions
         # are not strict enough.
-        os.umask(ARCHIVE_UMASK)
+        self.orig_umask = os.umask(ARCHIVE_UMASK)
+
+    def __del__(self):
+        os.umask(self.orig_umask)
 
     def run(self):
         self.try_read_queue = True

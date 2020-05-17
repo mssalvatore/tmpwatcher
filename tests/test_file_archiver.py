@@ -27,6 +27,7 @@ class FileArchiverTest(file_archiver.FileArchiver):
     # Need to put original functionality back so future tests aren't using the
     # mocks assigned to shutil and os.path
     def __del__(self):
+        super().__del__()
         shutil.copy2 = self.orig_copy2
         os.path.realpath = self.orig_realpath
 

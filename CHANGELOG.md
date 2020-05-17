@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 - Removed duplicate plugs in snapcraft.yaml.
 
+### Fixed
+- Failure to reset umask when FileArchiver instance was destroyed, leading to
+  0600 permissions on the htmlcov directory created by pytest.
+
 ## [2.1.0] - 2020-04-01
 ### Changed
 - File archive performance: Run a thread for archiving files, rather than
