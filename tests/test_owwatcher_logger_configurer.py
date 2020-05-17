@@ -88,7 +88,7 @@ def test_syslog_logger_invalid_protocol(monkeypatch):
     with pytest.raises(ValueError) as ve:
         owlc.OWWatcherLoggerConfigurer(options)
 
-    assert "Unexpected protocol 'icmp'. Valid protocols are 'tcp' or 'udp'." in str(ve)
+    assert "Unexpected protocol 'icmp'. Valid protocols are 'tcp' or 'udp'." in str(ve.value)
 
 def test_syslog_logger_null(monkeypatch):
     options = Mock_Options(syslog_port=None, syslog_server=None,

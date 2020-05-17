@@ -119,7 +119,7 @@ def test_invalid_perms_mask_large(sample_args):
     with pytest.raises(ValueError) as ve:
         opt = options.Options(args)
 
-    assert "ValueError: 1000 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
+    assert "1000 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve.value)
 
 def test_invalid_perms_mask_small(sample_args):
     sample_args['perms_mask'] = -0o1
@@ -128,7 +128,7 @@ def test_invalid_perms_mask_small(sample_args):
     with pytest.raises(ValueError) as ve:
         opt = options.Options(args)
 
-    assert "ValueError: -1 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve)
+    assert "-1 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve.value)
 
 def test_invalid_perms_mask_type(sample_args):
     sample_args['perms_mask'] = "bogus"
@@ -137,7 +137,7 @@ def test_invalid_perms_mask_type(sample_args):
     with pytest.raises(TypeError) as te:
         opt = options.Options(args)
 
-    assert "The permissions mask must be an octal integer" in str(te)
+    assert "The permissions mask must be an octal integer" in str(te.value)
 
 def test_invalid_protocol(sample_args):
     sample_args['tcp'] = "bogus"
@@ -175,7 +175,7 @@ def test_invalid_archive_path(SAMPLE_ARGS):
     with pytest.raises(ValueError) as ve:
         opt = options.Options(args)
 
-    assert "Cannot archive files:" in str(ve)
+    assert "Cannot archive files:" in str(ve.value)
 
 def test_realpath_archive_path(monkeypatch, sample_args):
     realpath =  "/home/user/tmp"
@@ -246,7 +246,7 @@ def test_config_to_tuple_invalid_protocol(monkeypatch, config):
     with pytest.raises(ValueError) as ve:
         opt = options.Options(t)
 
-    assert "Unknown protocol 'bogus'. Valid protocols are 'udp' or 'tcp'" in str(ve)
+    assert "Unknown protocol 'bogus'. Valid protocols are 'udp' or 'tcp'" in str(ve.value)
 
 def test_config_to_tuple_invalid_stdout(monkeypatch, config):
     patch_isdir(monkeypatch, config["DEFAULT"]["dirs"])
@@ -256,4 +256,4 @@ def test_config_to_tuple_invalid_stdout(monkeypatch, config):
     with pytest.raises(ValueError) as ve:
         opt = options.Options(t)
 
-    assert "'yes' is not a valid value for the stdout option. Valid values are 'True' or 'False'." in str(ve)
+    assert "'yes' is not a valid value for the stdout option. Valid values are 'True' or 'False'." in str(ve.value)

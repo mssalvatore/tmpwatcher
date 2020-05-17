@@ -80,7 +80,7 @@ class Options:
             raise TypeError(Options.PERMS_FORMAT_MSG)
 
         if self.perms_mask < 0 or self.perms_mask > 0o777:
-                raise ValueError(Options.INVALID_PERMS_ERROR % format(self.perms_mask, 'o'))
+            raise ValueError(Options.INVALID_PERMS_ERROR % format(self.perms_mask, 'o'))
 
     def _raise_on_invalid_syslog_port(self):
         if self.syslog_port is None:
