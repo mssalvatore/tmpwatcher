@@ -38,4 +38,3 @@ setuptools.setup(
     entry_points={'console_scripts': ['owwatcher=owwatcher.__main__:main']},
     package_data={'owwatcher': ['owwatcher-default.conf']}
 )
-

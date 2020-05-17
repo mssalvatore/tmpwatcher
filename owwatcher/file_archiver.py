@@ -101,4 +101,3 @@ class FileArchiver():
             # check, especially if OWWatcher is installed as a snap.
             return ((not real_file_path.startswith(self.watch_dir)) or
                     (not real_copy_path.startswith(self.archive_path)))
-

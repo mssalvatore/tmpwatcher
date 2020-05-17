@@ -42,7 +42,7 @@ class SyslogAlerter():
                 continue
 
             self.logger.info("Found file matching the permissions mask. Sending alert.")
-            self._send_syslog_alert(watch_dir, event_path, filename);
+            self._send_syslog_alert(watch_dir, event_path, filename)
 
     def _send_syslog_alert(self, watch_dir, event_path, filename):
         msg = "Found permissions matching mask %s on" % "{:03o}".format(self.perms_mask)
@@ -79,8 +79,8 @@ class SyslogAlerter():
 
             if status.st_mode & mask:
                 return self.all_dirs_in_path_match_mask(watch_dir, str(Path(path).parent), mask)
-            else:
-                return False
+
+            return False
         except (FileNotFoundError)as fnf:
             self.logger.debug("File was deleted before its permissions could be checked: %s" % str(fnf))
             return True

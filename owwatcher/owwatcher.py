@@ -108,11 +108,11 @@ class OWWatcher():
         try:
             if recursive:
                 return inotify.adapters.InotifyTree(watch_dir, mask=OWWatcher.EVENT_MASK)
-            else:
-                i = inotify.adapters.Inotify()
-                i.add_watch(watch_dir, mask=OWWatcher.EVENT_MASK)
 
-                return i
+            i = inotify.adapters.Inotify()
+            i.add_watch(watch_dir, mask=OWWatcher.EVENT_MASK)
+
+            return i
         except PermissionError as pe:
             raise CriticalError("Failed to set up inotify watches due to a " \
                     "permissions error. Try running OWWatcher as root. (%s)" % str(pe))

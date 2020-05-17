@@ -98,10 +98,11 @@ class OWWatcherLoggerConfigurer:
     def _get_socket_type_from_protocol_name(protocol):
         if protocol == "tcp":
             return socket.SOCK_STREAM
-        elif protocol == "udp":
+
+        if protocol == "udp":
             return socket.SOCK_DGRAM
-        else:
-            raise ValueError("Unexpected protocol '%s'. Valid protocols are " \
+
+        raise ValueError("Unexpected protocol '%s'. Valid protocols are " \
                     "'tcp' or 'udp'." % protocol)
 
     def get_owwatcher_logger(self):
@@ -117,4 +118,3 @@ class OWWatcherLoggerConfigurer:
             null_logger.addHandler(logging.NullHandler())
 
         return null_logger
-

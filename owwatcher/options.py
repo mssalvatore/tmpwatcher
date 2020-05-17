@@ -86,8 +86,8 @@ class Options:
         if self.syslog_port is None:
             if self.syslog_server is None:
                 return
-            else:
-                raise ValueError(Options.PORT_WITHOUT_SERVER)
+
+            raise ValueError(Options.PORT_WITHOUT_SERVER)
 
         if not isinstance(self.syslog_port, int):
             raise TypeError(Options.INVALID_PORT_ERROR)
@@ -99,8 +99,8 @@ class Options:
         if self.syslog_server is None :
             if self.syslog_port is None:
                 return
-            else:
-                raise ValueError(Options.SERVER_WITHOUT_PORT)
+
+            raise ValueError(Options.SERVER_WITHOUT_PORT)
 
     def _raise_on_invalid_archive_path(self):
         if self.archive_path is not None:
