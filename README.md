@@ -1,6 +1,35 @@
 # OWWatcher
 
-[![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
+<p align="center">
+	<a href="https://github.com/mssalvatore/owwatcher/blob/master/LICENSE">
+		<img src="https://img.shields.io/github/license/mssalvatore/owwatcher" alt="GitHub license">
+	</a>
+	<img src="https://img.shields.io/github/v/tag/mssalvatore/owwatcher" alt="GitHub tag (latest by date)">
+	<a href="https://travis-ci.org/mssalvatore/owwatcher">
+		<img src="https://travis-ci.org/mssalvatore/owwatcher.svg?branch=master" alt="Build Status">
+	</a>
+	<a href="https://codecov.io/gh/mssalvatore/owwatcher">
+		<img src="https://codecov.io/gh/mssalvatore/owwatcher/branch/master/graph/badge.svg" alt="codecov">
+	</a>
+	<img alt="CodeFactor Grade" src="https://img.shields.io/codefactor/grade/github/mssalvatore/owwatcher">
+	<a href="https://github.com/mssalvatore/owwatcher/issues">
+		<img src="https://img.shields.io/github/issues/mssalvatore/owwatcher" alt="GitHub issues">
+	</a>
+	<img src="https://img.shields.io/github/issues-pr/mssalvatore/owwatcher" alt="GitHub pull requests">
+	<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/mssalvatore/owwatcher">
+	<a href="https://snapcraft.io/owwatcher">
+		<img src="https://snapcraft.io//owwatcher/badge.svg" alt="owwatcher">
+	</a>
+	<a href="https://www.python.org/">
+		<img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" alt="made-with-python">
+	</a>
+	<a href="http://makeapullrequest.com">
+		<img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
+	</a>
+	<a href="https://www.firsttimersonly.com/">
+		<img src="https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square" alt="first-timers-only">
+	</a>
+</p>
 
 OWWatcher detects when world-writable directories or files are created in a
 user-specified directory. This is useful for passively discovering information
