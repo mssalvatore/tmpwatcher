@@ -1,4 +1,4 @@
-from .inotify_event_constants import InotifyEventConstants as iec
+from owwatcher.inotify_event_constants import InotifyEventConstants as iec
 import os
 import queue
 import shutil

@@ -2,7 +2,7 @@
 
 import inotify.adapters
 import inotify.constants as ic
-from .inotify_event_constants import InotifyEventConstants as iec
+from owwatcher.inotify_event_constants import InotifyEventConstants as iec
 import os
 from pathlib import Path
 import threading

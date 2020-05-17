@@ -71,7 +71,7 @@ $> pip3 install .
 $> deactivate
 ```
 
-## Runing OWWatcher
+## Running OWWatcher
 
 See "Usage" or run `owwatcher --help` for a description of
 available command line arguments.
@@ -133,6 +133,10 @@ optional arguments:
 Options can be loaded from a config file if OWWatcher is invoked with the
 `--config-path` option.  An example config file can be found at
 `./owwatcher/owwatcher-default.conf`.
+
+### Run directly
+
+OWWatcher can be run directly from this repository by running `python3 -m owwatcher`
 
 ### If installed as a snap
 

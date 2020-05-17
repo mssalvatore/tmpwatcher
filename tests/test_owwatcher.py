@@ -1,6 +1,6 @@
 import collections
 from owwatcher import file_archiver_builder
-from owwatcher import InotifyEventConstants as iec
+from owwatcher.inotify_event_constants import InotifyEventConstants as iec
 import logging
 import os
 from owwatcher import owwatcher

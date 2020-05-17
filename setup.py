@@ -8,7 +8,7 @@ os.umask(0o022)
 
 setuptools.setup(
     name="owwatcher",
-    version="2.1.0",
+    version="2.2.0",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
     description="Detects when world-writable directories or files are " \
@@ -35,7 +35,7 @@ setuptools.setup(
         'pytest',
         'pytest-cov',
     ],
-    entry_points={'console_scripts': ['owwatcher=owwatcher.main:main']},
+    entry_points={'console_scripts': ['owwatcher=owwatcher.__main__:main']},
     package_data={'owwatcher': ['owwatcher-default.conf']}
 )
 
