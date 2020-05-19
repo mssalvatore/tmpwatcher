@@ -65,7 +65,8 @@ class SyslogAlerter:
         file_or_dir = "directory" if os.path.isdir(full_path) else "file"
         msg = "%s %s: %s" % (msg, file_or_dir, new_event_path)
 
-        # TODO: Alerter shouldn't be making this decision. This logic belongs somewhere else.
+        # TODO: Alerter shouldn't be making this decision. This logic belongs
+        #       somewhere else.
         if self.all_dirs_in_path_match_mask(watch_dir, event_path, self.perms_mask):
             self.logger.warning(msg)
             self.syslog_logger.warning(msg)

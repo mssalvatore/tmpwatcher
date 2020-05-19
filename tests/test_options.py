@@ -89,7 +89,7 @@ def test_syslog_port_is_none_server_defined(monkeypatch):
     args = options.Args(**args_dict)
 
     with pytest.raises(ValueError):
-        o = options.Options(args)
+        options.Options(args)
 
 
 def test_syslog_server_is_none_port_defined(monkeypatch):
@@ -97,7 +97,7 @@ def test_syslog_server_is_none_port_defined(monkeypatch):
     args = options.Args(**args_dict)
 
     with pytest.raises(ValueError):
-        o = options.Options(args)
+        options.Options(args)
 
 
 def test_syslog_server_is_empty_port_defined(monkeypatch):
@@ -105,7 +105,7 @@ def test_syslog_server_is_empty_port_defined(monkeypatch):
     args = options.Args(**args_dict)
 
     with pytest.raises(ValueError):
-        o = options.Options(args)
+        options.Options(args)
 
 
 def mock_args_dir(monkeypatch, is_dir, error=None):
@@ -171,12 +171,12 @@ def test_invalid_perms_mask_large(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(ValueError) as ve:
-        opt = options.Options(args)
+        options.Options(args)
 
     assert (
-        "1000 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive."
-        in str(ve.value)
-    )
+        "1000 is an invalid permissions mask. The permissions mask must be an "
+        "octal integer (e.g. 755) between 0 and 777 inclusive."
+    ) in str(ve.value)
 
 
 def test_invalid_perms_mask_small(sample_args):
@@ -184,11 +184,11 @@ def test_invalid_perms_mask_small(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(ValueError) as ve:
-        opt = options.Options(args)
+        options.Options(args)
 
     assert (
-        "-1 is an invalid permissions mask. The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive."
-        in str(ve.value)
+        "-1 is an invalid permissions mask. The permissions mask must be an "
+        "octal integer (e.g. 755) between 0 and 777 inclusive." in str(ve.value)
     )
 
 
@@ -197,7 +197,7 @@ def test_invalid_perms_mask_type(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(TypeError) as te:
-        opt = options.Options(args)
+        options.Options(args)
 
     assert "The permissions mask must be an octal integer" in str(te.value)
 
@@ -207,7 +207,7 @@ def test_invalid_protocol(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
-        opt = options.Options(args)
+        options.Options(args)
 
 
 def test_protocol_tcp(sample_args):
@@ -231,7 +231,7 @@ def test_invalid_recursive(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
-        opt = options.Options(args)
+        options.Options(args)
 
 
 def test_invalid_archive_path(SAMPLE_ARGS):
@@ -240,7 +240,7 @@ def test_invalid_archive_path(SAMPLE_ARGS):
     args = options.Args(**SAMPLE_ARGS)
 
     with pytest.raises(ValueError) as ve:
-        opt = options.Options(args)
+        options.Options(args)
 
     assert "Cannot archive files:" in str(ve.value)
 
@@ -261,7 +261,7 @@ def test_invalid_stdout(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
-        opt = options.Options(args)
+        options.Options(args)
 
 
 def test_invalid_debug(sample_args):
@@ -269,7 +269,7 @@ def test_invalid_debug(sample_args):
     args = options.Args(**sample_args)
 
     with pytest.raises(ValueError):
-        opt = options.Options(args)
+        options.Options(args)
 
 
 @pytest.fixture
@@ -295,19 +295,19 @@ def test_config_to_tuple(monkeypatch, config):
     t = options.Options.config_to_tuple(config, False)
 
     assert t.dirs == config["DEFAULT"]["dirs"]
-    assert t.recursive == True
+    assert t.recursive is True
     assert t.perms_mask == config["DEFAULT"]["perms_mask"]
     assert t.archive_path == config["DEFAULT"]["archive_path"]
     assert t.syslog_port == config["DEFAULT"]["syslog_port"]
     assert t.syslog_server == config["DEFAULT"]["syslog_server"]
-    assert t.tcp == True
+    assert t.tcp is True
     assert t.log_file == config["DEFAULT"]["log_file"]
-    assert t.stdout == True
-    assert t.debug == False
+    assert t.stdout is True
+    assert t.debug is False
 
     config["DEFAULT"]["protocol"] = "udp"
     t = options.Options.config_to_tuple(config, False)
-    assert t.tcp == False
+    assert t.tcp is False
 
 
 def test_config_to_tuple_invalid_protocol(monkeypatch, config):
@@ -316,7 +316,7 @@ def test_config_to_tuple_invalid_protocol(monkeypatch, config):
     t = options.Options.config_to_tuple(config, False)
 
     with pytest.raises(ValueError) as ve:
-        opt = options.Options(t)
+        options.Options(t)
 
     assert "Unknown protocol 'bogus'. Valid protocols are 'udp' or 'tcp'" in str(
         ve.value
@@ -329,9 +329,9 @@ def test_config_to_tuple_invalid_stdout(monkeypatch, config):
     t = options.Options.config_to_tuple(config, False)
 
     with pytest.raises(ValueError) as ve:
-        opt = options.Options(t)
+        options.Options(t)
 
     assert (
-        "'yes' is not a valid value for the stdout option. Valid values are 'True' or 'False'."
-        in str(ve.value)
+        "'yes' is not a valid value for the stdout option. Valid values are "
+        "'True' or 'False'." in str(ve.value)
     )

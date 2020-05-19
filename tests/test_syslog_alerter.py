@@ -4,8 +4,6 @@ import os
 import time
 from unittest.mock import MagicMock
 
-import pytest
-
 from owwatcher import syslog_alerter
 
 
@@ -36,7 +34,7 @@ def mock_stat(stats):
 def lambda_mock_stat(_, stats):
     try:
         return next(mock_stat(stats))
-    except:
+    except Exception:
         return Stat(st_mode=0o777)
 
 

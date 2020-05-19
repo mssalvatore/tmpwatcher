@@ -27,8 +27,8 @@ setuptools.setup(
     ],
     install_requires=["inotify"],
     python_requires=">=3.5",
-    setup_requires=["pytest-runner", "pre-commit",],
-    tests_require=["pytest", "pytest-cov",],
+    setup_requires=["pytest-runner", "pre-commit"],
+    tests_require=["pytest", "pytest-cov"],
     entry_points={"console_scripts": ["owwatcher=owwatcher.__main__:main"]},
     package_data={"owwatcher": ["owwatcher-default.conf"]},
 )

@@ -14,14 +14,23 @@ Args = collections.namedtuple(
 class Options:
     INVALID_DIR_ERROR = "'%s' does not exist or is not a directory."
     INVALID_ARCHIVE_PATH_ERROR = "Cannot archive files: %s" % INVALID_DIR_ERROR
-    PERMS_FORMAT_MSG = "The permissions mask must be an octal integer (e.g. 755) between 0 and 777 inclusive."
+    PERMS_FORMAT_MSG = (
+        "The permissions mask must be an octal integer (e.g. 755) "
+        "between 0 and 777 inclusive."
+    )
     INVALID_PERMS_ERROR = "%s is an invalid permissions mask. " + PERMS_FORMAT_MSG
     INVALID_PORT_ERROR = "Port must be an integer between 1 and 65535 inclusive."
     INVALID_PROTOCOL_ERROR = (
         "Unknown protocol '%s'. Valid protocols are 'udp' or 'tcp'."
     )
-    INVALID_STDOUT_ERROR = "'%s' is not a valid value for the stdout option. Valid values are 'True' or 'False'."
-    INVALID_DEBUG_ERROR = "'%s' is not a valid value for the debug option. Valid values are 'True' or 'False'."
+    INVALID_STDOUT_ERROR = (
+        "'%s' is not a valid value for the stdout option. "
+        "Valid values are 'True' or 'False'."
+    )
+    INVALID_DEBUG_ERROR = (
+        "'%s' is not a valid value for the debug option. "
+        "Valid values are 'True' or 'False'."
+    )
     PORT_WITHOUT_SERVER = "Cannot specify a syslog port without a syslog server."
     SERVER_WITHOUT_PORT = "Cannot specify a syslog server without a syslog port."
 

@@ -1,5 +1,3 @@
-import pytest
-
 from owwatcher import __main__ as main
 
 

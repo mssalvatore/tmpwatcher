@@ -3,7 +3,6 @@
 import os
 import threading
 import time
-from pathlib import Path
 
 import inotify.adapters
 import inotify.constants as ic
@@ -110,11 +109,11 @@ class OWWatcher:
                 )
                 self.logger.warning(msg)
             except inotify.adapters.TerminalEventException as tex:
-                time.sleep(
-                    1
-                )  # TODO: Fix this hack for avoiding race condition failure when IN_UNMOUNT event is received
+                # TODO: Fix this hack for avoiding race condition failure when
+                #       IN_UNMOUNT event is received.
+                time.sleep(1)
                 self.logger.warning(
-                    "Caught a terminal inotify event (%s). Rebuilding inotify watchers..."
+                    "Caught a terminal inotify event (%s). Rebuilding inotify watchers."
                     % str(tex)
                 )
             except inotify.calls.InotifyError as iex:

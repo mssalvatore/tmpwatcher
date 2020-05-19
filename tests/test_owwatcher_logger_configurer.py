@@ -68,50 +68,50 @@ def mock_socket_connect(monkeypatch):
 
 
 def test_owwatcher_logger_level_debug(owlc_full_debug):
-    l = owlc_full_debug.get_owwatcher_logger()
-    assert l.getEffectiveLevel() == logging.DEBUG
+    logger = owlc_full_debug.get_owwatcher_logger()
+    assert logger.getEffectiveLevel() == logging.DEBUG
 
 
 def test_owwatcher_logger_level_info(owlc_full_no_debug):
-    l = owlc_full_no_debug.get_owwatcher_logger()
-    assert l.getEffectiveLevel() == logging.INFO
+    logger = owlc_full_no_debug.get_owwatcher_logger()
+    assert logger.getEffectiveLevel() == logging.INFO
 
 
 def test_syslog_logger_level_debug(owlc_full_debug):
-    l = owlc_full_debug.get_syslog_logger()
-    assert l.getEffectiveLevel() == logging.DEBUG
+    logger = owlc_full_debug.get_syslog_logger()
+    assert logger.getEffectiveLevel() == logging.DEBUG
 
 
 def test_syslog_logger_level_info(owlc_full_no_debug):
-    l = owlc_full_no_debug.get_syslog_logger()
-    assert l.getEffectiveLevel() == logging.INFO
+    logger = owlc_full_no_debug.get_syslog_logger()
+    assert logger.getEffectiveLevel() == logging.INFO
 
 
 def test_syslog_logger_has_syslog_handler(owlc_full_debug):
-    l = owlc_full_debug.get_syslog_logger()
+    logger = owlc_full_debug.get_syslog_logger()
 
-    assert len(l.handlers) == 1
-    assert isinstance(l.handlers[0], logging.handlers.SysLogHandler)
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.handlers.SysLogHandler)
 
 
 def test_syslog_logger_server(owlc_full_debug):
-    l = owlc_full_debug.get_syslog_logger()
-    assert l.handlers[0].address[0] == "localhost"
+    logger = owlc_full_debug.get_syslog_logger()
+    assert logger.handlers[0].address[0] == "localhost"
 
 
 def test_syslog_logger_port(owlc_full_debug):
-    l = owlc_full_debug.get_syslog_logger()
-    assert l.handlers[0].address[1] == 1337
+    logger = owlc_full_debug.get_syslog_logger()
+    assert logger.handlers[0].address[1] == 1337
 
 
 def test_syslog_logger_udp(owlc_full_debug):
-    l = owlc_full_debug.get_syslog_logger()
-    assert l.handlers[0].socktype == socket.SOCK_DGRAM
+    logger = owlc_full_debug.get_syslog_logger()
+    assert logger.handlers[0].socktype == socket.SOCK_DGRAM
 
 
 def test_syslog_logger_tcp(owlc_tcp):
-    l = owlc_tcp.get_syslog_logger()
-    assert l.handlers[0].socktype == socket.SOCK_STREAM
+    logger = owlc_tcp.get_syslog_logger()
+    assert logger.handlers[0].socktype == socket.SOCK_STREAM
 
 
 def test_syslog_logger_invalid_protocol(monkeypatch):
@@ -147,10 +147,10 @@ def test_syslog_logger_null(monkeypatch):
     )
 
     owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    l = owlc_null_syslog.get_syslog_logger()
+    logger = owlc_null_syslog.get_syslog_logger()
 
-    assert len(l.handlers) == 1
-    assert isinstance(l.handlers[0], logging.NullHandler)
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.NullHandler)
 
 
 def test_owwatcher_file_and_stdout(monkeypatch):
@@ -166,11 +166,11 @@ def test_owwatcher_file_and_stdout(monkeypatch):
     )
 
     owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    l = owlc_null_syslog.get_owwatcher_logger()
+    logger = owlc_null_syslog.get_owwatcher_logger()
 
-    assert len(l.handlers) == 2
-    assert isinstance(l.handlers[0], logging.FileHandler)
-    assert isinstance(l.handlers[1], logging.StreamHandler)
+    assert len(logger.handlers) == 2
+    assert isinstance(logger.handlers[0], logging.FileHandler)
+    assert isinstance(logger.handlers[1], logging.StreamHandler)
 
 
 def test_owwatcher_stdout_only(monkeypatch):
@@ -186,10 +186,10 @@ def test_owwatcher_stdout_only(monkeypatch):
     )
 
     owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    l = owlc_null_syslog.get_owwatcher_logger()
+    logger = owlc_null_syslog.get_owwatcher_logger()
 
-    assert len(l.handlers) == 1
-    assert isinstance(l.handlers[0], logging.StreamHandler)
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.StreamHandler)
 
 
 def test_owwatcher_stdout_only_by_default(monkeypatch):
@@ -205,10 +205,10 @@ def test_owwatcher_stdout_only_by_default(monkeypatch):
     )
 
     owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    l = owlc_null_syslog.get_owwatcher_logger()
+    logger = owlc_null_syslog.get_owwatcher_logger()
 
-    assert len(l.handlers) == 1
-    assert isinstance(l.handlers[0], logging.StreamHandler)
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.StreamHandler)
 
 
 def test_owwatcher_file_only(monkeypatch):
@@ -224,7 +224,7 @@ def test_owwatcher_file_only(monkeypatch):
     )
 
     owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    l = owlc_null_syslog.get_owwatcher_logger()
+    logger = owlc_null_syslog.get_owwatcher_logger()
 
-    assert len(l.handlers) == 1
-    assert isinstance(l.handlers[0], logging.FileHandler)
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.FileHandler)

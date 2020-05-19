@@ -1,9 +1,6 @@
 import collections
 import logging
 import os
-import shutil
-import time
-from queue import LifoQueue
 from unittest.mock import MagicMock
 
 import pytest
@@ -65,7 +62,7 @@ def mock_stat(stats):
 def lambda_mock_stat(_, stats):
     try:
         return next(mock_stat(stats))
-    except:
+    except Exception:
         return Stat(st_mode=0o777)
 
 
@@ -156,7 +153,6 @@ def test_process_event_mismatched_mask(monkeypatch, owwatcher_object):
 
 
 def test_process_event_empty_mask(monkeypatch, owwatcher_object):
-    watch_dir = "/tmp"
     event = (None, [iec.IN_CREATE, iec.IN_DELETE], "/tmp/random_dir_kljafl", "a_file")
     patch_stat(monkeypatch, [0o777])
 
@@ -166,8 +162,6 @@ def test_process_event_empty_mask(monkeypatch, owwatcher_object):
 
 
 def test_process_event_raise_fnf(monkeypatch, owwatcher_object):
-    watch_dir = "/tmp"
-
     def raise_(x):
         raise x
 
@@ -177,7 +171,7 @@ def test_process_event_raise_fnf(monkeypatch, owwatcher_object):
 
     try:
         owwatcher_object._process_event("/tmp/", event)
-    except:
+    except Exception:
         assert False
 
 
