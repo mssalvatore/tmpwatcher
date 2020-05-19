@@ -233,6 +233,13 @@ necessary to add delays into other system calls as well.
 
 ## Development
 
+### Installing pre-commit hooks
+
+To install the pre-commit hooks, run:
+	
+	pip3 install --user pre-commint
+	~/.local/bin/pre-commit install
+
 ### Test Suite
 
 The test suite requires you install pytest: `pip3 install --user pytest`
