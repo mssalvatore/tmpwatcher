@@ -1,5 +1,7 @@
-from owwatcher import __main__ as main
 import pytest
+
+from owwatcher import __main__ as main
+
 
 def test_check_if_snap_true(monkeypatch):
     monkeypatch.setenv('SNAP_DATA', '/var/snap/TESTING')

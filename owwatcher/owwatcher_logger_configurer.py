@@ -3,6 +3,7 @@ import logging.handlers
 import socket
 import sys
 
+
 # This factory class creates and configures owwatcher's loggers
 class OWWatcherLoggerConfigurer:
     def __init__(self, options):

@@ -1,7 +1,10 @@
 import os
 import os.path
-from owwatcher import options
+
 import pytest
+
+from owwatcher import options
+
 
 def patch_isdir(monkeypatch, is_dir):
     monkeypatch.setattr(os.path, "isdir", lambda _: is_dir)

@@ -1,10 +1,13 @@
 import collections
 import logging
 import os
-from owwatcher import syslog_alerter
-import pytest
 import time
 from unittest.mock import MagicMock
+
+import pytest
+
+from owwatcher import syslog_alerter
+
 
 class SyslogAlerterTest(syslog_alerter.SyslogAlerter):
     def __init__(self, perms_mask, is_snap):
@@ -98,5 +101,3 @@ def test_snap_prefix_stripped(monkeypatch):
 
     at.syslog_logger.warning.assert_called_with("Found permissions matching mask 002 on file: /tmp/test")
     pass
-
-

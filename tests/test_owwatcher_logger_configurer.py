@@ -1,8 +1,10 @@
 import collections
 import logging
-from owwatcher import owwatcher_logger_configurer as owlc
-import pytest
 import socket
+
+import pytest
+
+from owwatcher import owwatcher_logger_configurer as owlc
 
 Mock_Options = collections.namedtuple('Mock_Options',
         'dirs perms_mask syslog_port syslog_server log_file protocol stdout debug')

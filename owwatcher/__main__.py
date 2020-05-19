@@ -3,13 +3,14 @@
 import argparse
 import collections
 import configparser
-from owwatcher.file_archiver_builder import FileArchiverBuilder
-from owwatcher.options import Options
 import os
-from owwatcher.owwatcher_logger_configurer import OWWatcherLoggerConfigurer
-from owwatcher.owwatcher import OWWatcher
 import signal
 import sys
+
+from owwatcher.file_archiver_builder import FileArchiverBuilder
+from owwatcher.options import Options
+from owwatcher.owwatcher import OWWatcher
+from owwatcher.owwatcher_logger_configurer import OWWatcherLoggerConfigurer
 from owwatcher.syslog_alerter import SyslogAlerter
 
 # Creating null loggers allows pytest test suite to run as logging is not

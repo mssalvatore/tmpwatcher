@@ -1,6 +1,9 @@
 import logging
+
 import pytest
+
 from owwatcher import file_archiver_builder
+
 
 @pytest.fixture
 def null_logger():

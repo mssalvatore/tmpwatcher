@@ -1,8 +1,8 @@
 import os
-from pathlib import Path
 import queue
-from queue import Queue
 import threading
+from pathlib import Path
+from queue import Queue
 
 SNAP_HOSTFS_PATH_PREFIX = "/var/lib/snapd/hostfs"
 VULNERABILITY_MITIGATED_MSG = " -- Vulnerabilities are potentially mitigated as " \

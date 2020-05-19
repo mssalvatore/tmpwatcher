@@ -1,7 +1,7 @@
 import collections
-from distutils import util
 import os
 import os.path
+from distutils import util
 
 Args = collections.namedtuple('Args', 'dirs recursive perms_mask archive_path ' \
                                       'syslog_port syslog_server tcp stdout ' \

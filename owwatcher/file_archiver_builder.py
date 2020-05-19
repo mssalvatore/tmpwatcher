@@ -1,5 +1,7 @@
-from owwatcher.file_archiver import FileArchiver
 from queue import LifoQueue
+
+from owwatcher.file_archiver import FileArchiver
+
 
 # TODO: Consider whether it's worth the hasle to use a DI framework and get rid
 #       of this class.

@@ -1,12 +1,15 @@
 import collections
 import logging
 import os
-from owwatcher import file_archiver
-import pytest
-from queue import LifoQueue
 import shutil
 import time
+from queue import LifoQueue
 from unittest.mock import MagicMock
+
+import pytest
+
+from owwatcher import file_archiver
+
 
 class FileArchiverTest(file_archiver.FileArchiver):
     def __init__(self):

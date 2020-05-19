@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
-import inotify.adapters
-import inotify.constants as ic
-from owwatcher.inotify_event_constants import InotifyEventConstants as iec
 import os
-from pathlib import Path
 import threading
 import time
+from pathlib import Path
+
+import inotify.adapters
+import inotify.constants as ic
+
+from owwatcher.inotify_event_constants import InotifyEventConstants as iec
+
 
 class CriticalError(Exception):
     pass

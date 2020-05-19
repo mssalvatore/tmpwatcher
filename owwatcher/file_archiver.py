@@ -1,9 +1,10 @@
-from owwatcher.inotify_event_constants import InotifyEventConstants as iec
 import os
 import queue
 import shutil
 import threading
 import time
+
+from owwatcher.inotify_event_constants import InotifyEventConstants as iec
 
 ARCHIVE_UMASK = 0o177
 PATH_TRAVERSAL_ERROR = "Attempting to archive %s may result in files being " \
