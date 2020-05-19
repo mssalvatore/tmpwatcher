@@ -7,10 +7,11 @@ from owwatcher import file_archiver_builder
 
 @pytest.fixture
 def null_logger():
-    null_logger = logging.getLogger('owwatcher.null')
+    null_logger = logging.getLogger("owwatcher.null")
     null_logger.addHandler(logging.NullHandler())
 
     return null_logger
+
 
 def test_archive_path(null_logger):
     archive_path = "/tmp/archive"
@@ -18,6 +19,7 @@ def test_archive_path(null_logger):
     fa = fab.build_file_archiver(None)
 
     assert fa.archive_path == archive_path
+
 
 def test_watch_dir(null_logger):
     archive_path = "/tmp/archive"
@@ -27,6 +29,7 @@ def test_watch_dir(null_logger):
 
     assert fa.watch_dir == watch_dir
 
+
 def test_queue_not_none(null_logger):
     archive_path = "/tmp/archive"
     watch_dir = "/tmp/watch_dir"
@@ -35,6 +38,7 @@ def test_queue_not_none(null_logger):
 
     assert fa.archive_queue is not None
 
+
 def test_nop_archiver_none(null_logger):
     archive_path = None
     watch_dir = "/tmp/watch_dir"
@@ -42,6 +46,7 @@ def test_nop_archiver_none(null_logger):
     fa = fab.build_file_archiver(watch_dir)
 
     assert isinstance(fa, file_archiver_builder.FileArchiverBuilder.NOPFileArchiver)
+
 
 def test_nop_archiver_empty(null_logger):
     archive_path = ""
