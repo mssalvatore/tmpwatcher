@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [2.2.0] - 2020-05-22
+### Added
+- Continuous integration with Travis CI.
+
+### Changed
+- Removed duplicate plugs in snapcraft.yaml.
+- Switched from relative to absolute imports.
+
+### Fixed
+- Failure to reset umask when FileArchiver instance was destroyed, leading to
+  0600 permissions on the htmlcov directory created by pytest.
+- Unit tests that fail with pytest 5.4.x and later (python 3.8 and later)
+
 ## [2.1.0] - 2020-04-01
 ### Changed
 - File archive performance: Run a thread for archiving files, rather than

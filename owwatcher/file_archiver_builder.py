@@ -1,16 +1,20 @@
-from .file_archiver import FileArchiver
 from queue import LifoQueue
+
+from owwatcher.file_archiver import FileArchiver
+
 
 # TODO: Consider whether it's worth the hasle to use a DI framework and get rid
 #       of this class.
-class FileArchiverBuilder():
+class FileArchiverBuilder:
     def __init__(self, logger, archive_path):
         self.logger = logger
         self.archive_path = archive_path
 
     def build_file_archiver(self, watch_dir):
         if self.archive_path is None or self.archive_path == "":
-            self.logger.debug("No archive path was specified; no files will be archived")
+            self.logger.debug(
+                "No archive path was specified; no files will be archived"
+            )
             return FileArchiverBuilder.NOPFileArchiver()
 
         # Use LIFO queue, because copying anything is better than trying to copy

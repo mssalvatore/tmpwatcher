@@ -1,4 +1,5 @@
 import os
+
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -8,12 +9,12 @@ os.umask(0o022)
 
 setuptools.setup(
     name="owwatcher",
-    version="2.1.0",
+    version="2.2.0",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
-    description="Detects when world-writable directories or files are " \
-        "created in a specific directory. Useful for finding TOCTOU "\
-        "vulnerabilities.",
+    description="Detects when world-writable directories or files are "
+    "created in a specific directory. Useful for finding TOCTOU "
+    "vulnerabilities.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
@@ -24,18 +25,10 @@ setuptools.setup(
         "Operating System :: POSIX :: Linux",
         "Topic :: Security",
     ],
-    install_requires=[
-	"inotify"
-    ],
+    install_requires=["inotify"],
     python_requires=">=3.5",
-    setup_requires=[
-        'pytest-runner',
-    ],
-    tests_require=[
-        'pytest',
-        'pytest-cov',
-    ],
-    entry_points={'console_scripts': ['owwatcher=owwatcher.main:main']},
-    package_data={'owwatcher': ['owwatcher-default.conf']}
+    setup_requires=["pytest-runner", "pre-commit"],
+    tests_require=["pytest", "pytest-cov"],
+    entry_points={"console_scripts": ["owwatcher=owwatcher.__main__:main"]},
+    package_data={"owwatcher": ["owwatcher-default.conf"]},
 )
-

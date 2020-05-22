@@ -1,0 +1,17 @@
+language: python
+python:
+    - "3.5"
+    - "3.6"
+    - "3.7"
+    - "3.8"
+    - "3.9-dev"
+    - "nightly"
+before_install:
+    - pip install codecov
+    - pip install pytest-cov
+install:
+    - pip install .
+script:
+    - py.test -vv --cov-report=term --cov=owwatcher
+after_success:
+    codecov

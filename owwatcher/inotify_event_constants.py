@@ -1,6 +1,7 @@
 import inotify.constants as ic
 
-class InotifyEventConstants():
+
+class InotifyEventConstants:
     IN_ATTRIB = ic.MASK_LOOKUP[ic.IN_ATTRIB]
     IN_CLOSE_WRITE = ic.MASK_LOOKUP[ic.IN_CLOSE_WRITE]
     IN_CREATE = ic.MASK_LOOKUP[ic.IN_CREATE]
