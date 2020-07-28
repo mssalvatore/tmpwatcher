@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cp $SNAP/lib/python3.6/site-packages/owwatcher/owwatcher-default.conf $SNAP_DATA/owwatcher.conf
-snapctl stop --disable owwatcher.owwatcherd
+cp $SNAP/lib/python3.6/site-packages/tmpwatcher/tmpwatcher-default.conf $SNAP_DATA/tmpwatcher.conf
+snapctl stop --disable tmpwatcher.tmpwatcherd

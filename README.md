@@ -1,24 +1,24 @@
-# OWWatcher
+# TmpWatcher
 
 <p align="center">
-	<a href="https://github.com/mssalvatore/owwatcher/blob/master/LICENSE">
-		<img src="https://img.shields.io/github/license/mssalvatore/owwatcher" alt="GitHub license">
+	<a href="https://github.com/mssalvatore/tmpwatcher/blob/master/LICENSE">
+		<img src="https://img.shields.io/github/license/mssalvatore/tmpwatcher" alt="GitHub license">
 	</a>
-	<img src="https://img.shields.io/github/v/tag/mssalvatore/owwatcher" alt="GitHub tag (latest by date)">
-	<a href="https://travis-ci.org/mssalvatore/owwatcher">
-		<img src="https://travis-ci.org/mssalvatore/owwatcher.svg?branch=master" alt="Build Status">
+	<img src="https://img.shields.io/github/v/tag/mssalvatore/tmpwatcher" alt="GitHub tag (latest by date)">
+	<a href="https://travis-ci.org/mssalvatore/tmpwatcher">
+		<img src="https://travis-ci.org/mssalvatore/tmpwatcher.svg?branch=master" alt="Build Status">
 	</a>
-	<a href="https://codecov.io/gh/mssalvatore/owwatcher">
-		<img src="https://codecov.io/gh/mssalvatore/owwatcher/branch/master/graph/badge.svg" alt="codecov">
+	<a href="https://codecov.io/gh/mssalvatore/tmpwatcher">
+		<img src="https://codecov.io/gh/mssalvatore/tmpwatcher/branch/master/graph/badge.svg" alt="codecov">
 	</a>
-	<img alt="CodeFactor Grade" src="https://img.shields.io/codefactor/grade/github/mssalvatore/owwatcher">
-	<a href="https://github.com/mssalvatore/owwatcher/issues">
-		<img src="https://img.shields.io/github/issues/mssalvatore/owwatcher" alt="GitHub issues">
+	<img alt="CodeFactor Grade" src="https://img.shields.io/codefactor/grade/github/mssalvatore/tmpwatcher">
+	<a href="https://github.com/mssalvatore/tmpwatcher/issues">
+		<img src="https://img.shields.io/github/issues/mssalvatore/tmpwatcher" alt="GitHub issues">
 	</a>
-	<img src="https://img.shields.io/github/issues-pr/mssalvatore/owwatcher" alt="GitHub pull requests">
-	<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/mssalvatore/owwatcher">
-	<a href="https://snapcraft.io/owwatcher">
-		<img src="https://snapcraft.io//owwatcher/badge.svg" alt="owwatcher">
+	<img src="https://img.shields.io/github/issues-pr/mssalvatore/tmpwatcher" alt="GitHub pull requests">
+	<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/mssalvatore/tmpwatcher">
+	<a href="https://snapcraft.io/tmpwatcher">
+		<img src="https://snapcraft.io//tmpwatcher/badge.svg" alt="tmpwatcher">
 	</a>
 	<a href="https://www.python.org/">
 		<img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" alt="made-with-python">
@@ -31,20 +31,20 @@
 	</a>
 </p>
 
-OWWatcher detects when world-writable directories or files are created in a
+TmpWatcher detects when world-writable directories or files are created in a
 user-specified directory. This is useful for passively discovering information
 disclosure, symlink race, or TOCTOU vulnerabilities.
 
 ## Description
 
-OWWatcher uses [inotify](http://man7.org/linux/man-pages/man7/inotify.7.html) to
+TmpWatcher uses [inotify](http://man7.org/linux/man-pages/man7/inotify.7.html) to
 monitor a directory of your choosing (usually `/tmp`). If any world-writable files
 or directories are created in the monitored directory, a notification is logged
 and/or sent via the syslog protocol to a syslog server of your choosing. This is
 useful for passively discovering information disclosure, symlink race, or TOCTOU
 vulnerabilities. Instead of reading source code in search of vulnerabilities,
-simply configure OWWatcher and go about your business. You can investigate any
-alerts OWWatcher creates to see if they qualify as vulnerabilities.
+simply configure TmpWatcher and go about your business. You can investigate any
+alerts TmpWatcher creates to see if they qualify as vulnerabilities.
 
 "A symlink race is a kind of software security vulnerability that results from
 a program creating files in an insecure manner. A malicious user can create
@@ -81,7 +81,7 @@ active approach (e.g.  code audits.)
 
 This project can be installed by using snap:
 
-`snap install owwatcher`
+`snap install tmpwatcher`
 
 ### pip
 
@@ -100,15 +100,15 @@ $> pip3 install .
 $> deactivate
 ```
 
-## Running OWWatcher
+## Running TmpWatcher
 
-See "Usage" or run `owwatcher --help` for a description of
+See "Usage" or run `tmpwatcher --help` for a description of
 available command line arguments.
 
 ### Usage
 
 ```
-usage: owwatcher [-h] [-c CONFIG_PATH] [-d DIRS] [-r] [-m PERMS_MASK]
+usage: tmpwatcher [-h] [-c CONFIG_PATH] [-d DIRS] [-r] [-m PERMS_MASK]
                  [-a ARCHIVE_PATH] [-p SYSLOG_PORT] [-s SYSLOG_SERVER] [-t]
                  [--stdout] [-l LOG_FILE] [--debug]
 
@@ -120,7 +120,7 @@ optional arguments:
   -c CONFIG_PATH, --config-path CONFIG_PATH
                         A config file to read settings from. Command line
                         arguments override values read from the config file.
-                        If the config file does not exist, owwatcher will log
+                        If the config file does not exist, tmpwatcher will log
                         a warning and ignore the specified config file. NOTE:
                         If a config file is specified, all other command-line
                         options will be ignored. (default: None)
@@ -134,8 +134,8 @@ optional arguments:
                         a mask (e.g. 077) to identify files with incorrect
                         permissions (default: None)
   -a ARCHIVE_PATH, --archive-path ARCHIVE_PATH
-                        A directory where files identified by OWWatcher can be
-                        archived. If this option is set, OWWatcher will
+                        A directory where files identified by TmpWatcher can be
+                        archived. If this option is set, TmpWatcher will
                         *attempt* to copy files that are world writable or
                         match perms-mask so they can be inspected. (default:
                         None)
@@ -149,7 +149,7 @@ optional arguments:
                         (default: False)
   --stdout              Send output to stdout. This is the default behaviorif
                         a log file is not specified. If a log file is
-                        specified, OWWatcher will not send output to
+                        specified, TmpWatcher will not send output to
                         stdoutunless this flag is set. (default: False)
   -l LOG_FILE, --log-file LOG_FILE
                         Path to log file (default: None)
@@ -159,30 +159,30 @@ optional arguments:
 
 ### Configuration Files
 
-Options can be loaded from a config file if OWWatcher is invoked with the
+Options can be loaded from a config file if TmpWatcher is invoked with the
 `--config-path` option.  An example config file can be found at
-`./owwatcher/owwatcher-default.conf`.
+`./tmpwatcher/tmpwatcher-default.conf`.
 
 ### Run directly
 
-OWWatcher can be run directly from this repository by running `python3 -m owwatcher`
+TmpWatcher can be run directly from this repository by running `python3 -m tmpwatcher`
 
 ### If installed as a snap
 
-If installed as a snap, OWWatcher can be run in the background as a daemon or in
-the foreground. You can enable and disable the OWWatcher daemon by running `snap
-start --enable owwatcher` and `snap stop --disable owwatcher`.
+If installed as a snap, TmpWatcher can be run in the background as a daemon or in
+the foreground. You can enable and disable the TmpWatcher daemon by running `snap
+start --enable tmpwatcher` and `snap stop --disable tmpwatcher`.
 
-You can invoke `owwatcher` directly as long as `/snap/bin` is in your $PATH.
+You can invoke `tmpwatcher` directly as long as `/snap/bin` is in your $PATH.
 
-The OWWatcher daemon loads its settings from
-`/var/snap/owwatcher/current/owwatcher.conf`. Configuration and log files are
-located at `/var/snap/owwatcher/current/`.
+The TmpWatcher daemon loads its settings from
+`/var/snap/tmpwatcher/current/tmpwatcher.conf`. Configuration and log files are
+located at `/var/snap/tmpwatcher/current/`.
 
 ### If installed with pip
 
 If this project has been installed using pip, you can simply invoke
-`owwatcher`, assuming the installed script is in your $PATH.
+`tmpwatcher`, assuming the installed script is in your $PATH.
 
 ### If installed with virtualenv
 
@@ -191,7 +191,7 @@ performing the following steps:
 
 ```
 $> source venv/bin/activate
-$> owwatcher
+$> tmpwatcher
 $> deactivate
 ```
 
@@ -204,7 +204,7 @@ $> deactivate
 `/tmp/`. In these cases, your [umask](https://en.wikipedia.org/wiki/Umask) will
 determine what permissions the files are created with. This means that a
 properly configured umask can mitigate  potential vulnerabilities in many
-applications. It also means that, in these cases, OWWatcher may not be effective
+applications. It also means that, in these cases, TmpWatcher may not be effective
 in identifying potential vulnerabilities. There are two ways to remedy this
 shortcoming:
 
@@ -220,11 +220,11 @@ shortcoming:
     Opening up your umask like this is insecure. Only do this if you understand
     the risks.
 
-1. OWWatcher may not catch absolutely everything. Because of the way inotify and
+1. TmpWatcher may not catch absolutely everything. Because of the way inotify and
 the python inotify module work, there are a number of scenarios where a race
 condition could cause a world writable file to slip under the radar. One example
 of such a race condition is when a new file is created and then deleted before
-OWWatcher can check its permissions. You can reduce the effects of this
+TmpWatcher can check its permissions. You can reduce the effects of this
 particular race condition by using strace to introduce a delay into the `mkdir`
 and `openat` system calls of an application you are investigating. It may be
 necessary to add delays into other system calls as well.
@@ -265,6 +265,6 @@ A test coverage report can be viewed by pointing your browser at
 1. It may be acceptable for some files to be world writable. A whitelist
    capability to prevent unnecessary alerts would reduce false positives.
 
-1. It would be nice if OWWatcher had an option that told it to scan the whole
+1. It would be nice if TmpWatcher had an option that told it to scan the whole
    system for directories with 0777 permissions and monitor them, rather than
    having the user specify each directory.

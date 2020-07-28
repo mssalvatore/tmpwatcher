@@ -12,6 +12,6 @@ before_install:
 install:
     - pip install .
 script:
-    - py.test -vv --cov-report=term --cov=owwatcher
+    - py.test -vv --cov-report=term --cov=tmpwatcher
 after_success:
     codecov

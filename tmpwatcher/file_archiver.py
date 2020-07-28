@@ -4,7 +4,7 @@ import shutil
 import threading
 import time
 
-from owwatcher.inotify_event_constants import InotifyEventConstants as iec
+from tmpwatcher.inotify_event_constants import InotifyEventConstants as iec
 
 ARCHIVE_UMASK = 0o177
 PATH_TRAVERSAL_ERROR = (
@@ -118,7 +118,7 @@ class FileArchiver:
         # manipulate this feature into writing arbitrary files to the
         # filesystem. There's still the potential for a TOCTOU race, but I'm
         # not convinced this is really an issue even without this paranoid
-        # check, especially if OWWatcher is installed as a snap.
+        # check, especially if TmpWatcher is installed as a snap.
         return (not real_file_path.startswith(self.watch_dir)) or (
             not real_copy_path.startswith(self.archive_path)
         )

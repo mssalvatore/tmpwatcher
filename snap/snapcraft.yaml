@@ -1,4 +1,4 @@
-name: owwatcher
+name: tmpwatcher
 architectures:
     - build-on: [amd64, i386, arm64]
 base: core18
@@ -21,7 +21,7 @@ grade: stable
 confinement: strict
 
 parts:
-    owwatcher:
+    tmpwatcher:
         plugin: python
         python-version: python3
         source: .
@@ -31,8 +31,8 @@ plugs:
     system-backup: null
 
 apps:
-    owwatcher:
-        command: bin/owwatcher
-    owwatcherd:
-        command: bin/owwatcher -c /var/snap/owwatcher/current/owwatcher.conf
+    tmpwatcher:
+        command: bin/tmpwatcher
+    tmpwatcherd:
+        command: bin/tmpwatcher -c /var/snap/tmpwatcher/current/tmpwatcher.conf
         daemon: simple

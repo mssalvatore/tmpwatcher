@@ -1,4 +1,4 @@
-from owwatcher import __main__ as main
+from tmpwatcher import __main__ as main
 
 
 def test_check_if_snap_true(monkeypatch):

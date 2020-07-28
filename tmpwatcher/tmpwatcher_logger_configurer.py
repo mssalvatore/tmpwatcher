@@ -4,15 +4,15 @@ import socket
 import sys
 
 
-# This factory class creates and configures owwatcher's loggers
-class OWWatcherLoggerConfigurer:
+# This factory class creates and configures tmpwatcher's loggers
+class TmpWatcherLoggerConfigurer:
     def __init__(self, options):
-        self.owwatcher_logger = None
+        self.tmpwatcher_logger = None
         self.syslog_logger = None
 
         self._configure_root_logger(options.debug)
         self._configure_inotify_logger(options.log_file, options.stdout)
-        self._configure_owwatcher_logger(options.log_file, options.stdout)
+        self._configure_tmpwatcher_logger(options.log_file, options.stdout)
         self._configure_syslog_logger(
             options.syslog_server, options.syslog_port, options.protocol
         )
@@ -20,13 +20,13 @@ class OWWatcherLoggerConfigurer:
     def __del__(self):
         root_logger = logging.getLogger()
         inotify_logger = logging.getLogger("inotify")
-        null_logger = OWWatcherLoggerConfigurer.get_null_logger()
+        null_logger = TmpWatcherLoggerConfigurer.get_null_logger()
 
-        OWWatcherLoggerConfigurer._clean_logger(root_logger)
-        OWWatcherLoggerConfigurer._clean_logger(null_logger)
-        OWWatcherLoggerConfigurer._clean_logger(inotify_logger)
-        OWWatcherLoggerConfigurer._clean_logger(self.owwatcher_logger)
-        OWWatcherLoggerConfigurer._clean_logger(self.syslog_logger)
+        TmpWatcherLoggerConfigurer._clean_logger(root_logger)
+        TmpWatcherLoggerConfigurer._clean_logger(null_logger)
+        TmpWatcherLoggerConfigurer._clean_logger(inotify_logger)
+        TmpWatcherLoggerConfigurer._clean_logger(self.tmpwatcher_logger)
+        TmpWatcherLoggerConfigurer._clean_logger(self.syslog_logger)
 
     @staticmethod
     def _clean_logger(logger):
@@ -52,14 +52,14 @@ class OWWatcherLoggerConfigurer:
             inotify_logger, log_formatter, log_file, log_to_stdout
         )
 
-    def _configure_owwatcher_logger(self, log_file, log_to_stdout):
-        self.owwatcher_logger = logging.getLogger("owwatcher.%s" % __name__)
+    def _configure_tmpwatcher_logger(self, log_file, log_to_stdout):
+        self.tmpwatcher_logger = logging.getLogger("tmpwatcher.%s" % __name__)
         log_formatter = logging.Formatter(
             "%(asctime)s - %(module)s - %(levelname)s - %(message)s"
         )
 
         self._configure_local_logger(
-            self.owwatcher_logger, log_formatter, log_file, log_to_stdout
+            self.tmpwatcher_logger, log_formatter, log_file, log_to_stdout
         )
 
     def _configure_local_logger(self, logger, log_formatter, log_file, log_to_stdout):
@@ -89,18 +89,18 @@ class OWWatcherLoggerConfigurer:
 
     def _configure_syslog_logger(self, syslog_server, syslog_port, protocol):
         if syslog_server is None or syslog_port is None:
-            self.syslog_logger = OWWatcherLoggerConfigurer.get_null_logger()
+            self.syslog_logger = TmpWatcherLoggerConfigurer.get_null_logger()
             return
 
-        # The syslog logger must not be a child of the self.owwatcher_logger,
+        # The syslog logger must not be a child of the self.tmpwatcher_logger,
         # otherwise some log messages may be duplicated as self.syslog_logger
-        # will inherit self.owwatcher_logger's handlers
-        self.syslog_logger = logging.getLogger("owwatcher.syslog")
+        # will inherit self.tmpwatcher_logger's handlers
+        self.syslog_logger = logging.getLogger("tmpwatcher.syslog")
         log_formatter = logging.Formatter(
-            "%(hostname)s - owwatcher - %(levelname)s - %(message)s"
+            "%(hostname)s - tmpwatcher - %(levelname)s - %(message)s"
         )
 
-        socket_type = OWWatcherLoggerConfigurer._get_socket_type_from_protocol_name(
+        socket_type = TmpWatcherLoggerConfigurer._get_socket_type_from_protocol_name(
             protocol
         )
         syslog_handler = logging.handlers.SysLogHandler(
@@ -124,15 +124,15 @@ class OWWatcherLoggerConfigurer:
             "'tcp' or 'udp'." % protocol
         )
 
-    def get_owwatcher_logger(self):
-        return self.owwatcher_logger
+    def get_tmpwatcher_logger(self):
+        return self.tmpwatcher_logger
 
     def get_syslog_logger(self):
         return self.syslog_logger
 
     @staticmethod
     def get_null_logger():
-        null_logger = logging.getLogger("owwatcher.null")
+        null_logger = logging.getLogger("tmpwatcher.null")
         if len(null_logger.handlers) < 1:
             null_logger.addHandler(logging.NullHandler())
 

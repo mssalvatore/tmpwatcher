@@ -1,6 +1,6 @@
 from queue import LifoQueue
 
-from owwatcher.file_archiver import FileArchiver
+from tmpwatcher.file_archiver import FileArchiver
 
 
 # TODO: Consider whether it's worth the hasle to use a DI framework and get rid

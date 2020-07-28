@@ -4,12 +4,12 @@ import os
 import time
 from unittest.mock import MagicMock
 
-from owwatcher import syslog_alerter
+from tmpwatcher import syslog_alerter
 
 
 class SyslogAlerterTest(syslog_alerter.SyslogAlerter):
     def __init__(self, perms_mask, is_snap):
-        null_logger = logging.getLogger("owwatcher.null")
+        null_logger = logging.getLogger("tmpwatcher.null")
         null_logger.addHandler(logging.NullHandler())
         super().__init__(perms_mask, null_logger, MagicMock(), 0.005, is_snap)
 

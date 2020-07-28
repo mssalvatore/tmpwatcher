@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-from owwatcher import options
+from tmpwatcher import options
 
 
 def patch_isdir(monkeypatch, is_dir):
@@ -140,12 +140,12 @@ def SAMPLE_ARGS():
         "dirs": "/tmp,/home/user/tmp",
         "recursive": False,
         "perms_mask": 0o077,
-        "archive_path": "/home/user/owwatcher",
+        "archive_path": "/home/user/tmpwatcher",
         "syslog_port": 514,
         "syslog_server": "127.0.0.1",
         "tcp": False,
         "stdout": False,
-        "log_file": "/var/log/owwatcher.log",
+        "log_file": "/var/log/tmpwatcher.log",
         "debug": False,
     }
 
@@ -279,11 +279,11 @@ def config():
             "dirs": "/tmp",
             "recursive": "True",
             "perms_mask": 0o077,
-            "archive_path": "/home/user/owwatcher_archive",
+            "archive_path": "/home/user/tmpwatcher_archive",
             "syslog_port": 514,
             "syslog_server": "127.0.0.1",
             "protocol": "tcp",
-            "log_file": "/var/log/owwatcher.log",
+            "log_file": "/var/log/tmpwatcher.log",
             "stdout": "True",
             "debug": "False",
         }

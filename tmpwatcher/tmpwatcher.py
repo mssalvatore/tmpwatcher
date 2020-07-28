@@ -7,7 +7,7 @@ import time
 import inotify.adapters
 import inotify.constants as ic
 
-from owwatcher.inotify_event_constants import InotifyEventConstants as iec
+from tmpwatcher.inotify_event_constants import InotifyEventConstants as iec
 
 
 class CriticalError(Exception):
@@ -16,7 +16,7 @@ class CriticalError(Exception):
 
 # Because the snap package uses the system-files interface, all system files
 # are accessible at the path "/var/lib/snapd/hostfs". Since this is cumbersome
-# for a user to remember and type whenever they use owwatcher. Detect whether
+# for a user to remember and type whenever they use tmpwatcher. Detect whether
 # or not this application is running as a snap package and prefix the requisite
 # path so the user doesn't have to.
 SNAP_HOSTFS_PATH_PREFIX = "/var/lib/snapd/hostfs"
@@ -33,7 +33,7 @@ PATH_TRAVERSAL_ERROR = (
 DEFAULT_OW_MASK = 0o002
 
 
-class OWWatcher:
+class TmpWatcher:
     EVENT_MASK = ic.IN_ATTRIB | ic.IN_CREATE | ic.IN_MOVED_TO | ic.IN_CLOSE_WRITE
     INTERESTING_EVENTS = {
         iec.IN_ATTRIB,
@@ -70,12 +70,12 @@ class OWWatcher:
             time.sleep(1)
 
     def _run_watcher_thread(self, d, recursive):
-        owwatcher_thread = threading.Thread(
+        tmpwatcher_thread = threading.Thread(
             target=self._watch_for_world_writable_files,
             args=(d, recursive),
             daemon=True,
         )
-        owwatcher_thread.start()
+        tmpwatcher_thread.start()
 
     def stop(self):
         self.process_events = False
@@ -143,17 +143,17 @@ class OWWatcher:
         try:
             if recursive:
                 return inotify.adapters.InotifyTree(
-                    watch_dir, mask=OWWatcher.EVENT_MASK
+                    watch_dir, mask=TmpWatcher.EVENT_MASK
                 )
 
             i = inotify.adapters.Inotify()
-            i.add_watch(watch_dir, mask=OWWatcher.EVENT_MASK)
+            i.add_watch(watch_dir, mask=TmpWatcher.EVENT_MASK)
 
             return i
         except PermissionError as pe:
             raise CriticalError(
                 "Failed to set up inotify watches due to a "
-                "permissions error. Try running OWWatcher as root. (%s)" % str(pe)
+                "permissions error. Try running TmpWatcher as root. (%s)" % str(pe)
             )
 
     def _process_event(self, watch_dir, event, file_archiver):
@@ -163,7 +163,7 @@ class OWWatcher:
         (_, event_types, event_path, filename) = event
         self._log_received_event_debug_msg(event_path, filename, event_types)
 
-        if not self._has_interesting_events(event_types, OWWatcher.INTERESTING_EVENTS):
+        if not self._has_interesting_events(event_types, TmpWatcher.INTERESTING_EVENTS):
             self.logger.debug("No relevant event types found")
             return
 

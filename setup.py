@@ -8,8 +8,8 @@ with open("README.md", "r") as fh:
 os.umask(0o022)
 
 setuptools.setup(
-    name="owwatcher",
-    version="2.2.0",
+    name="tmpwatcher",
+    version="3.0.0",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
     description="Detects when world-writable directories or files are "
@@ -29,6 +29,6 @@ setuptools.setup(
     python_requires=">=3.5",
     setup_requires=["pytest-runner", "pre-commit"],
     tests_require=["pytest", "pytest-cov"],
-    entry_points={"console_scripts": ["owwatcher=owwatcher.__main__:main"]},
-    package_data={"owwatcher": ["owwatcher-default.conf"]},
+    entry_points={"console_scripts": ["tmpwatcher=tmpwatcher.__main__:main"]},
+    package_data={"tmpwatcher": ["tmpwatcher-default.conf"]},
 )

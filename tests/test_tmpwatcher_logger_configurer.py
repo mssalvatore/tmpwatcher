@@ -4,7 +4,7 @@ import socket
 
 import pytest
 
-from owwatcher import owwatcher_logger_configurer as owlc
+from tmpwatcher import tmpwatcher_logger_configurer as owlc
 
 Mock_Options = collections.namedtuple(
     "Mock_Options",
@@ -34,7 +34,7 @@ def owlc_full(monkeypatch, debug):
         dirs=None,
         perms_mask=None,
     )
-    return owlc.OWWatcherLoggerConfigurer(options)
+    return owlc.TmpWatcherLoggerConfigurer(options)
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def owlc_tcp(monkeypatch):
         perms_mask=None,
     )
 
-    return owlc.OWWatcherLoggerConfigurer(options)
+    return owlc.TmpWatcherLoggerConfigurer(options)
 
 
 def mock_hostname(monkeypatch):
@@ -67,13 +67,13 @@ def mock_socket_connect(monkeypatch):
     monkeypatch.setattr(socket, "socket", lambda *args: mock_socket())
 
 
-def test_owwatcher_logger_level_debug(owlc_full_debug):
-    logger = owlc_full_debug.get_owwatcher_logger()
+def test_tmpwatcher_logger_level_debug(owlc_full_debug):
+    logger = owlc_full_debug.get_tmpwatcher_logger()
     assert logger.getEffectiveLevel() == logging.DEBUG
 
 
-def test_owwatcher_logger_level_info(owlc_full_no_debug):
-    logger = owlc_full_no_debug.get_owwatcher_logger()
+def test_tmpwatcher_logger_level_info(owlc_full_no_debug):
+    logger = owlc_full_no_debug.get_tmpwatcher_logger()
     assert logger.getEffectiveLevel() == logging.INFO
 
 
@@ -127,7 +127,7 @@ def test_syslog_logger_invalid_protocol(monkeypatch):
         perms_mask=None,
     )
     with pytest.raises(ValueError) as ve:
-        owlc.OWWatcherLoggerConfigurer(options)
+        owlc.TmpWatcherLoggerConfigurer(options)
 
     assert "Unexpected protocol 'icmp'. Valid protocols are 'tcp' or 'udp'." in str(
         ve.value
@@ -146,14 +146,14 @@ def test_syslog_logger_null(monkeypatch):
         perms_mask=None,
     )
 
-    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
+    owlc_null_syslog = owlc.TmpWatcherLoggerConfigurer(options)
     logger = owlc_null_syslog.get_syslog_logger()
 
     assert len(logger.handlers) == 1
     assert isinstance(logger.handlers[0], logging.NullHandler)
 
 
-def test_owwatcher_file_and_stdout(monkeypatch):
+def test_tmpwatcher_file_and_stdout(monkeypatch):
     options = Mock_Options(
         syslog_port=None,
         syslog_server=None,
@@ -165,15 +165,15 @@ def test_owwatcher_file_and_stdout(monkeypatch):
         perms_mask=None,
     )
 
-    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    logger = owlc_null_syslog.get_owwatcher_logger()
+    owlc_null_syslog = owlc.TmpWatcherLoggerConfigurer(options)
+    logger = owlc_null_syslog.get_tmpwatcher_logger()
 
     assert len(logger.handlers) == 2
     assert isinstance(logger.handlers[0], logging.FileHandler)
     assert isinstance(logger.handlers[1], logging.StreamHandler)
 
 
-def test_owwatcher_stdout_only(monkeypatch):
+def test_tmpwatcher_stdout_only(monkeypatch):
     options = Mock_Options(
         syslog_port=None,
         syslog_server=None,
@@ -185,14 +185,14 @@ def test_owwatcher_stdout_only(monkeypatch):
         perms_mask=None,
     )
 
-    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    logger = owlc_null_syslog.get_owwatcher_logger()
+    owlc_null_syslog = owlc.TmpWatcherLoggerConfigurer(options)
+    logger = owlc_null_syslog.get_tmpwatcher_logger()
 
     assert len(logger.handlers) == 1
     assert isinstance(logger.handlers[0], logging.StreamHandler)
 
 
-def test_owwatcher_stdout_only_by_default(monkeypatch):
+def test_tmpwatcher_stdout_only_by_default(monkeypatch):
     options = Mock_Options(
         syslog_port=None,
         syslog_server=None,
@@ -204,14 +204,14 @@ def test_owwatcher_stdout_only_by_default(monkeypatch):
         perms_mask=None,
     )
 
-    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    logger = owlc_null_syslog.get_owwatcher_logger()
+    owlc_null_syslog = owlc.TmpWatcherLoggerConfigurer(options)
+    logger = owlc_null_syslog.get_tmpwatcher_logger()
 
     assert len(logger.handlers) == 1
     assert isinstance(logger.handlers[0], logging.StreamHandler)
 
 
-def test_owwatcher_file_only(monkeypatch):
+def test_tmpwatcher_file_only(monkeypatch):
     options = Mock_Options(
         syslog_port=None,
         syslog_server=None,
@@ -223,8 +223,8 @@ def test_owwatcher_file_only(monkeypatch):
         perms_mask=None,
     )
 
-    owlc_null_syslog = owlc.OWWatcherLoggerConfigurer(options)
-    logger = owlc_null_syslog.get_owwatcher_logger()
+    owlc_null_syslog = owlc.TmpWatcherLoggerConfigurer(options)
+    logger = owlc_null_syslog.get_tmpwatcher_logger()
 
     assert len(logger.handlers) == 1
     assert isinstance(logger.handlers[0], logging.FileHandler)

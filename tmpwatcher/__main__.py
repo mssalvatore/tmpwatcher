@@ -6,22 +6,22 @@ import os
 import signal
 import sys
 
-from owwatcher.file_archiver_builder import FileArchiverBuilder
-from owwatcher.options import Options
-from owwatcher.owwatcher import OWWatcher
-from owwatcher.owwatcher_logger_configurer import OWWatcherLoggerConfigurer
-from owwatcher.syslog_alerter import SyslogAlerter
+from tmpwatcher.file_archiver_builder import FileArchiverBuilder
+from tmpwatcher.options import Options
+from tmpwatcher.syslog_alerter import SyslogAlerter
+from tmpwatcher.tmpwatcher import TmpWatcher
+from tmpwatcher.tmpwatcher_logger_configurer import TmpWatcherLoggerConfigurer
 
 # Creating null loggers allows pytest test suite to run as logging is not
 # necessarily configured for each unit test run.
-_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
-_SYSLOG_LOGGER = OWWatcherLoggerConfigurer.get_null_logger()
+_LOGGER = TmpWatcherLoggerConfigurer.get_null_logger()
+_SYSLOG_LOGGER = TmpWatcherLoggerConfigurer.get_null_logger()
 
-_OWWATCHER = None
+_TMPWATCHER = None
 
 
 def main():
-    global _OWWATCHER
+    global _TMPWATCHER
     try:
         is_snap = check_if_snap()
 
@@ -31,7 +31,7 @@ def main():
             args = Options.config_to_tuple(config, is_snap)
 
         options = Options(args, is_snap)
-        logger_configurer = OWWatcherLoggerConfigurer(options)
+        logger_configurer = TmpWatcherLoggerConfigurer(options)
         configure_logging(options, logger_configurer)
         fab = FileArchiverBuilder(_LOGGER, options.archive_path)
         # TODO: Handle perms_mask default in Options instead of here
@@ -41,7 +41,7 @@ def main():
             options.perms_mask, _LOGGER, _SYSLOG_LOGGER, is_snap=is_snap
         )
         syslog_alerter.run()
-        _OWWATCHER = OWWatcher(
+        _TMPWATCHER = TmpWatcher(
             options.perms_mask, fab, _LOGGER, syslog_alerter, is_snap=is_snap
         )
 
@@ -51,10 +51,10 @@ def main():
         sys.exit(1)
         # TODO: Attempt to log error with some kind of failsafe logger
 
-    _LOGGER.info("Starting owwatcher...")
+    _LOGGER.info("Starting TmpWatcher...")
     _log_config_options(options)
 
-    _OWWATCHER.run(options.dirs, options.recursive)
+    _TMPWATCHER.run(options.dirs, options.recursive)
 
 
 def check_if_snap():
@@ -77,7 +77,7 @@ def _parse_args(is_snap):
         action="store",
         help="A config file to read settings from. Command line "
         "arguments override values read from the config file. "
-        "If the config file does not exist, owwatcher will "
+        "If the config file does not exist, tmpwatcher will "
         "log a warning and ignore the specified config file. "
         "NOTE: If a config file is specified, all other "
         "command-line options will be ignored.",
@@ -110,8 +110,8 @@ def _parse_args(is_snap):
         "-a",
         "--archive-path",
         action="store",
-        help="A directory where files identified by OWWatcher "
-        "can be archived. If this option is set, OWWatcher "
+        help="A directory where files identified by TmpWatcher "
+        "can be archived. If this option is set, TmpWatcher "
         "will *attempt* to copy files that are world writable "
         "or match perms-mask so they can be inspected.",
     )
@@ -139,7 +139,7 @@ def _parse_args(is_snap):
         action="store_true",
         help="Send output to stdout. This is the default behavior "
         "if a log file is not specified. If a log file is "
-        "specified, OWWatcher will not send output to stdout"
+        "specified, TmpWatcher will not send output to stdout"
         "unless this flag is set.",
     )
     parser.add_argument("-l", "--log-file", action="store", help="Path to log file")
@@ -161,7 +161,7 @@ def configure_logging(options, logger_configurer):
     global _LOGGER
     global _SYSLOG_LOGGER
 
-    _LOGGER = logger_configurer.get_owwatcher_logger()
+    _LOGGER = logger_configurer.get_tmpwatcher_logger()
     _SYSLOG_LOGGER = logger_configurer.get_syslog_logger()
 
 
@@ -174,8 +174,8 @@ def receive_signal(signum, stack_frame):
     _LOGGER.debug("Received signal %s" % signal.Signals(signum))
     _LOGGER.info("Cleaning up and exiting")
 
-    if _OWWATCHER is not None:
-        _OWWATCHER.stop()
+    if _TMPWATCHER is not None:
+        _TMPWATCHER.stop()
 
 
 def _log_config_options(options):

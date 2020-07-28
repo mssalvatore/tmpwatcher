@@ -8,12 +8,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from owwatcher import file_archiver
+from tmpwatcher import file_archiver
 
 
 class FileArchiverTest(file_archiver.FileArchiver):
     def __init__(self):
-        null_logger = logging.getLogger("owwatcher.null")
+        null_logger = logging.getLogger("tmpwatcher.null")
         null_logger.addHandler(logging.NullHandler())
         super().__init__(null_logger, "/fake/archive", "/tmp", LifoQueue(), 0.005)
 

@@ -2,12 +2,12 @@ import logging
 
 import pytest
 
-from owwatcher import file_archiver_builder
+from tmpwatcher import file_archiver_builder
 
 
 @pytest.fixture
 def null_logger():
-    null_logger = logging.getLogger("owwatcher.null")
+    null_logger = logging.getLogger("tmpwatcher.null")
     null_logger.addHandler(logging.NullHandler())
 
     return null_logger
