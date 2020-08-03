@@ -124,4 +124,3 @@ def test_snap_prefix_stripped(monkeypatch):
     at.syslog_logger.warning.assert_called_with(
         "Found permissions matching mask 002 on file: /tmp/test"
     )
-    pass
