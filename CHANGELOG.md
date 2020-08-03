@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [2.3.1] - 2020-08-03
+### Removed
+- Architecture specification in snapcraft.yaml so snaps are built uisng the
+  default behavior with respect to architectures
+
 ## [2.3.0] - 2020-08-01
 ### Changed
 - The name of the project from OWWatcher to TmpWatcher.

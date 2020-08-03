@@ -1,6 +1,4 @@
 name: tmpwatcher
-architectures:
-    - build-on: [amd64, i386, arm64]
 base: core18
 version: git
 summary: Detects when world-writable files are created in a specified directory

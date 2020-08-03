@@ -9,7 +9,7 @@ os.umask(0o022)
 
 setuptools.setup(
     name="tmpwatcher",
-    version="3.0.0",
+    version="2.3.2",
     author="Mike Salvatore",
     author_email="mike.s.salvatore@gmail.com",
     description="Detects when world-writable directories or files are "
